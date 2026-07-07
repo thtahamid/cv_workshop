@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exercise: Recognize Handwritten Digits — A Computer Vision Workshop</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23FBF3E4'/%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%23221F26' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='14' fill='%230E8C82'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Space+Grotesk:wght@400;500;600;700&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   DESIGN TOKENS — Vision Lab Notebook system
+   (kept identical to index.html so both decks match)
+   =========================================== */
+:root{
+  --paper:#FBF3E4;
+  --paper-light:#FFFDF8;
+  --ink:#221F26;
+  --ink-soft:#4A453F;
+  --line:#E4D6B8;
+  --coral:#FF6B4A;
+  --teal:#0E8C82;
+  --yellow:#FFC145;
+  --sky:#3E8FD6;
+
+  --code-bg:#221F26;
+  --code-text:#F3ECDD;
+  --code-kw:#FF8A68;
+  --code-str:#FFD37A;
+  --code-num:#7EC2F3;
+  --code-com:#948C7C;
+
+  --font-display:'Bricolage Grotesque',sans-serif;
+  --font-body:'Space Grotesk',sans-serif;
+  --font-hand:'Caveat',cursive;
+  --font-mono:'JetBrains Mono',monospace;
+
+  --ease:cubic-bezier(0.16,1,0.3,1);
+  --stage-bg:#151316;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+
+/* ===========================================
+   FIXED 16:9 STAGE — mandatory base (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000);}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000);}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff);}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff);}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1;}
+img,video,canvas,svg{max-width:100%;max-height:100%;}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000;}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff;}
+  .deck-viewport{position:static;overflow:visible;background:#fff;}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none;}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always;}
+  .slide:last-child{break-after:auto;page-break-after:auto;}
+  .deck-controls{display:none!important;}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important;}}
+
+/* ===========================================
+   SHARED SLIDE CHROME
+   =========================================== */
+.paper-bg{
+  position:relative;
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px),
+    var(--paper);
+  background-size:44px 44px, 44px 44px, auto;
+  background-position:-1px -1px,-1px -1px;
+  color:var(--ink);
+  font-family:var(--font-body);
+}
+.paper-bg::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 900px 560px at 8% 96%, color-mix(in srgb, var(--tint-a,#FF6B4A) 20%, transparent), transparent 70%),
+    radial-gradient(ellipse 760px 560px at 96% 4%, color-mix(in srgb, var(--tint-b,#0E8C82) 16%, transparent), transparent 70%);
+}
+
+.step-tag{
+  position:absolute; top:84px; left:150px; z-index:3;
+  font-family:var(--font-hand); font-size:32px; color:#7a5a26;
+  background:rgba(255,193,69,0.38); padding:6px 24px; border-radius:3px;
+  transform:rotate(-2.5deg);
+}
+.brand-logo{
+  position:absolute; top:70px; right:150px; z-index:3;
+  height:86px; width:auto;
+  background:#fff; padding:10px 16px; border-radius:12px;
+  border:2.5px solid var(--ink); box-shadow:5px 5px 0 var(--ink);
+  box-sizing:content-box;
+}
+
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease);}
+.slide.visible .reveal{opacity:1;transform:translateY(0);}
+.reveal.r1{transition-delay:.05s;}
+.reveal.r2{transition-delay:.15s;}
+.reveal.r3{transition-delay:.28s;}
+.reveal.r4{transition-delay:.4s;}
+.reveal.r5{transition-delay:.52s;}
+
+.headline{
+  position:absolute; left:150px; top:236px; width:830px; z-index:2;
+  font-family:var(--font-display); font-weight:800; font-size:70px; line-height:1.08; letter-spacing:-1px;
+  color:var(--ink);
+}
+.headline .accent{color:var(--coral);}
+.headline .accent-teal{color:var(--teal);}
+.oneliner{
+  position:absolute; left:150px; top:466px; width:790px; z-index:2;
+  font-size:27px; line-height:1.55; color:var(--ink-soft); font-weight:400;
+}
+.oneliner b{color:var(--teal); font-weight:600;}
+.oneliner b.c{color:var(--coral);}
+
+.code-card{
+  position:absolute; left:150px; top:642px; width:790px; z-index:2;
+  background:var(--code-bg); border-radius:16px; padding:0 0 26px;
+  box-shadow:0 18px 40px rgba(34,31,38,0.28), 0 0 0 2px var(--ink);
+  transform:rotate(-0.5deg);
+}
+.code-card-head{
+  display:flex; align-items:center; gap:10px; padding:16px 24px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:18px;
+}
+.code-card-head .dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
+.dot.d1{background:var(--coral);} .dot.d2{background:var(--yellow);} .dot.d3{background:var(--teal);}
+.filename{margin-left:10px; font-family:var(--font-mono); font-size:16px; color:var(--code-com);}
+.code-card pre{margin:0; padding:0 26px;}
+.code-card code{
+  font-family:var(--font-mono); font-size:22px; line-height:1.68; color:var(--code-text);
+  white-space:pre;
+}
+.tok-k{color:var(--code-kw); font-weight:600;} .tok-s{color:var(--code-str);} .tok-n{color:var(--code-num);} .tok-c{color:var(--code-com); font-style:italic;}
+
+.diagram-stage{
+  position:absolute; right:130px; top:200px; width:770px; height:700px; z-index:2;
+}
+.diagram-caption{
+  position:absolute; right:130px; bottom:96px; width:770px; text-align:right; z-index:2;
+  font-family:var(--font-mono); font-size:16px; color:var(--ink-soft); letter-spacing:0.5px;
+}
+
+/* ===========================================
+   TITLE / CLOSING SLIDE SPECIFICS
+   =========================================== */
+.tape{position:absolute; top:88px; left:150px; font-family:var(--font-hand); font-size:34px; color:#8a6d3b; transform:rotate(-3deg); background:rgba(255,193,69,0.35); padding:6px 22px; border-radius:2px; z-index:3;}
+.chips{position:absolute; left:150px; bottom:118px; display:flex; gap:22px; z-index:2;}
+.chip{font-family:var(--font-body); font-weight:600; font-size:20px; color:var(--ink); background:#fff; border:2.5px solid var(--ink); border-radius:100px; padding:14px 28px; box-shadow:5px 5px 0 var(--ink);}
+.chip.c1{background:var(--coral); color:#fff;} .chip.c2{background:var(--teal); color:#fff;} .chip.c3{background:var(--yellow); color:var(--ink);}
+
+/* ===========================================
+   DECK CONTROLS (outside slide design system)
+   =========================================== */
+.deck-controls{display:flex; align-items:center; gap:18px; background:rgba(34,31,38,0.85); backdrop-filter:blur(6px); padding:12px 20px; border-radius:100px; box-shadow:0 10px 30px rgba(0,0,0,0.35);}
+.nav-btn{width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.1);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.nav-btn:hover{background:var(--coral);}
+.dots{display:flex; gap:8px;}
+.dots button{width:9px;height:9px;border-radius:50%;border:none;background:rgba(255,255,255,0.28);cursor:pointer;padding:0;transition:transform .2s, background .2s;}
+.dots button.active{background:var(--yellow); transform:scale(1.5);}
+.progress-text{font-family:var(--font-mono); font-size:14px; color:#f3ecdd; letter-spacing:1px; min-width:52px; text-align:center;}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer;}
+.edit-toggle{position:fixed; top:14px; left:14px; width:44px; height:44px; border-radius:50%; border:none; background:var(--ink); color:var(--paper); font-size:18px; cursor:pointer; opacity:0; pointer-events:none; transition:opacity .3s ease; z-index:10001; display:flex; align-items:center; justify-content:center;}
+.edit-toggle.show,.edit-toggle.active{opacity:1; pointer-events:auto;}
+.edit-toggle.active{background:var(--coral);}
+[contenteditable="true"]{outline:2px dashed var(--coral); outline-offset:4px; cursor:text;}
+.export-toggle{position:fixed; top:14px; left:68px; width:44px; height:44px; border-radius:50%; border:none; background:var(--teal); color:#fff; font-size:16px; cursor:pointer; opacity:0; pointer-events:none; transition:opacity .3s ease; z-index:10001; display:flex; align-items:center; justify-content:center;}
+.export-toggle.show{opacity:1; pointer-events:auto;}
+
+/* ===========================================
+   BACK-TO-DECK LINK
+   =========================================== */
+.back-link{
+  position:absolute; top:88px; left:150px; z-index:3;
+  font-family:var(--font-mono); font-size:15px; color:var(--ink-soft);
+  text-decoration:none; display:flex; align-items:center; gap:8px;
+}
+.back-link:hover{color:var(--coral);}
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ============================================================
+     SLIDE 00 — DATASET
+     ============================================================ -->
+<section class="slide active visible" data-title="Dataset">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FFC145;--tint-b:#0E8C82;">
+    <a href="index.html" class="back-link">&#8592; back to the deck</a>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1" style="width:1620px;">Our Exercise: Recognize <span class="accent">Handwritten Digits</span></div>
+    <div class="oneliner reveal r2" style="width:1300px; top:400px;"><b>MNIST</b> is 70,000 handwritten digits, each a 28&times;28 grayscale image labeled 0 through 9. It's the classic first dataset for computer vision.</div>
+    <div class="diagram-stage" style="left:150px; right:auto; top:520px; width:1620px; height:420px;" id="dg-dataset"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 01 — BUILDING THE NETWORK
+     ============================================================ -->
+<section class="slide" data-title="Build">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#3E8FD6;--tint-b:#FF6B4A;">
+    <a href="index.html" class="back-link">&#8592; back to the deck</a>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Let's Build It: <span class="accent-teal">A Tiny Net</span> From Scratch</div>
+    <div class="oneliner reveal r2">Two layers of weights, two activation steps &mdash; that's the whole brain.</div>
+    <div class="code-card reveal r3" style="top:580px;">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">simple_net.py</span></div>
+      <pre><code class="code-py">class SimpleNet:
+    def __init__(self):
+        self.W1 = random_matrix(784, 128)
+        self.W2 = random_matrix(128, 10)
+    def forward(self, x):
+        h = relu(x @ self.W1)
+        return softmax(h @ self.W2)</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" style="top:200px; height:380px;" id="dg-arch"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 02 — TRAINING LOOP
+     ============================================================ -->
+<section class="slide" data-title="Training loop">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FF6B4A;--tint-b:#FFC145;">
+    <a href="index.html" class="back-link">&#8592; back to the deck</a>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Train By Repeating: <span class="accent">Predict, Measure, Adjust</span></div>
+    <div class="oneliner reveal r2">Thousands of tiny corrections later, the loss curve drops and the network gets sharper.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">train.py</span></div>
+      <pre><code class="code-py">for epoch in range(epochs):
+    predictions = net.forward(X_train)
+    grads = backprop(predictions, y_train)
+    net.update(grads, learning_rate)</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-trainloop"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 03 — LIVE TEST
+     ============================================================ -->
+<section class="slide" data-title="Live test">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#0E8C82;--tint-b:#3E8FD6;">
+    <a href="index.html" class="back-link">&#8592; back to the deck</a>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Show It a New Digit &mdash; <span class="accent-teal">What Does It See?</span></div>
+    <div class="oneliner reveal r2">The trained network turns a fresh drawing into ten confidence scores, then picks the highest one.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">predict.py</span></div>
+      <pre><code class="code-py">prediction = net.forward(my_drawing)
+digit = argmax(prediction)   # 7</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-predict"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 04 — RECAP / CLOSING
+     ============================================================ -->
+<section class="slide" data-title="Recap">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FFC145;--tint-b:#FF6B4A;">
+    <div class="tape editable" contenteditable="false">Nice work today</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1" style="width:1620px; top:210px; font-size:78px;">You Just Built the Core of <span class="accent">Computer Vision</span></div>
+    <div class="diagram-stage" style="left:150px; right:auto; top:400px; width:1620px; height:340px;" id="dg-recap"></div>
+    <div class="chips" style="bottom:120px;">
+      <span class="chip c1">Pixels are numbers</span>
+      <span class="chip c2">Filters find features</span>
+      <span class="chip c3">Neurons combine evidence</span>
+      <span class="chip" style="background:var(--sky); color:#fff;">Training shrinks error</span>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- Deck controls (outside the slide design system) -->
+<div class="deck-controls">
+  <button class="nav-btn" id="prevBtn" aria-label="Previous slide">&#8592;</button>
+  <div class="dots" id="dotsWrap"></div>
+  <span class="progress-text" id="progressText">1 / 5</span>
+  <button class="nav-btn" id="nextBtn" aria-label="Next slide">&#8594;</button>
+</div>
+
+<!-- Inline editing affordances -->
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">&#9998;</button>
+<button class="export-toggle" id="exportToggle" title="Export HTML">&#8681;</button>
+
+<script>
+/* ===========================================
+   SVG DIAGRAM RENDERERS
+   Small self-contained helpers — no external libs.
+   Each render function mounts one SVG into a container div.
+   =========================================== */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function svgRoot(vb){ return el('svg', {viewBox:vb, preserveAspectRatio:'xMidYMid meet'}); }
+function mount(id, svg){ const host=document.getElementById(id); if(!host) return; host.innerHTML=''; host.appendChild(svg); }
+function hexToRgb(hex){ hex=hex.replace('#',''); const n=parseInt(hex,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function mix(hexA,hexB,t){ const a=hexToRgb(hexA),b=hexToRgb(hexB); const l=(x,y)=>Math.round(x+(y-x)*t); return `rgb(${l(a[0],b[0])},${l(a[1],b[1])},${l(a[2],b[2])})`; }
+
+const INK='#221F26', PAPER='#FFFDF8', CORAL='#FF6B4A', TEAL='#0E8C82', YELLOW='#FFC145', SKY='#3E8FD6';
+
+/* 5x7 dot-matrix digit bitmaps */
+const DIGIT_BITMAPS = {
+  0:['01110','10001','10011','10101','11001','10001','01110'],
+  1:['00100','01100','00100','00100','00100','00100','01110'],
+  2:['01110','10001','00001','00010','00100','01000','11111'],
+  3:['11111','00010','00100','00010','00001','10001','01110'],
+  4:['00010','00110','01010','10010','11111','00010','00010'],
+  5:['11111','10000','11110','00001','00001','10001','01110'],
+  6:['00110','01000','10000','11110','10001','10001','01110'],
+  7:['11111','00001','00010','00100','01000','01000','01000'],
+  8:['01110','10001','10001','01110','10001','10001','01110'],
+  9:['01110','10001','10001','01111','00001','00010','01100']
+};
+
+function arrow(x1,y1,x2,y2){
+  const g=el('g',{});
+  g.appendChild(el('line',{x1,y1,x2,y2,stroke:INK,'stroke-width':3}));
+  const angle=Math.atan2(y2-y1,x2-x1);
+  const ah=10;
+  const p1x=x2-ah*Math.cos(angle-0.4), p1y=y2-ah*Math.sin(angle-0.4);
+  const p2x=x2-ah*Math.cos(angle+0.4), p2y=y2-ah*Math.sin(angle+0.4);
+  g.appendChild(el('path',{d:`M${x2},${y2} L${p1x},${p1y} M${x2},${y2} L${p2x},${p2y}`,stroke:INK,'stroke-width':3,'stroke-linecap':'round'}));
+  return g;
+}
+
+/* ---------- Dataset grid of digit thumbnails ---------- */
+function renderDataset(id){
+  const W=1620,H=420; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const n=10; const cardW=130, cardH=170, gap=(W-n*cardW)/(n+1);
+  for(let i=0;i<10;i++){
+    const x = gap + i*(cardW+gap);
+    const y = 40;
+    const g=el('g',{transform:`rotate(${(i%2?1:-1)*2} ${x+cardW/2} ${y+cardH/2})`});
+    g.appendChild(el('rect',{x,y,width:cardW,height:cardH,rx:14,fill:'#fff',stroke:INK,'stroke-width':3}));
+    const bmp=DIGIT_BITMAPS[i];
+    const cell=14;
+    const bx=x+(cardW-5*cell)/2, by=y+22;
+    bmp.forEach((row,r)=>[...row].forEach((ch,c)=>{
+      if(ch==='1') g.appendChild(el('rect',{x:bx+c*cell,y:by+r*cell,width:cell-2,height:cell-2,fill:INK}));
+    }));
+    const lab=el('text',{x:x+cardW/2,y:y+cardH-16,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'16',fill: i%3===0?CORAL:(i%3===1?TEAL:SKY)});
+    lab.textContent='label: '+i;
+    g.appendChild(lab);
+    svg.appendChild(g);
+  }
+  mount(id,svg);
+}
+
+/* ---------- Architecture recap for build slide ---------- */
+function renderArch(id){
+  const W=770,H=380; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const boxes=[{x:40,label:'input',dim:'784'},{x:300,label:'hidden',dim:'128'},{x:560,label:'output',dim:'10'}];
+  boxes.forEach((b,i)=>{
+    svg.appendChild(el('rect',{x:b.x,y:130,width:170,height:120,rx:16,fill: i===1? '#0E8C8222':'#22222208', stroke:INK,'stroke-width':3}));
+    const t=el('text',{x:b.x+85,y:185,'text-anchor':'middle','font-family':'Bricolage Grotesque, sans-serif','font-size':'26','font-weight':'700',fill:INK});
+    t.textContent=b.label; svg.appendChild(t);
+    const d=el('text',{x:b.x+85,y:220,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'22','fill':CORAL});
+    d.textContent=b.dim; svg.appendChild(d);
+    if(i<2) svg.appendChild(arrow(b.x+170+6,190,boxes[i+1].x-6,190));
+  });
+  mount(id,svg);
+}
+
+/* ---------- Training loop: loss curve over epochs ---------- */
+function renderTrainLoop(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const ox=100, oy=560, ax=670, ay=120;
+  svg.appendChild(el('line',{x1:ox,y1:oy,x2:ax,y2:oy,stroke:INK,'stroke-width':3}));
+  svg.appendChild(el('line',{x1:ox,y1:oy,x2:ox,y2:ay,stroke:INK,'stroke-width':3}));
+  const xl=el('text',{x:ax-20,y:oy+34,'font-family':'JetBrains Mono, monospace','font-size':'19',fill:'#4A453F'}); xl.textContent='epoch'; svg.appendChild(xl);
+  const yl=el('text',{x:ox-14,y:ay-14,'text-anchor':'end','font-family':'JetBrains Mono, monospace','font-size':'19',fill:'#4A453F'}); yl.textContent='loss'; svg.appendChild(yl);
+  // decreasing curve
+  const pts=[]; const N=40;
+  for(let i=0;i<=N;i++){
+    const t=i/N;
+    const x = ox + t*(ax-ox-20);
+    const y = oy - (oy-ay-40) * (1-Math.exp(-3.2*t)) ;
+    pts.push([x,y]);
+  }
+  const d = 'M'+pts.map(p=>p[0]+','+p[1]).join(' L');
+  svg.appendChild(el('path',{d,fill:'none',stroke:CORAL,'stroke-width':5,'stroke-linecap':'round'}));
+  const last=pts[pts.length-1];
+  svg.appendChild(el('circle',{cx:last[0],cy:last[1],r:9,fill:CORAL,stroke:INK,'stroke-width':2}));
+  const curveLabel=el('text',{x:ox+60,y:ay+40,'font-family':'Space Grotesk, sans-serif','font-size':'21','font-weight':'700',fill:CORAL}); curveLabel.textContent='loss'; svg.appendChild(curveLabel);
+  mount(id,svg);
+}
+
+/* ---------- Live predict diagram ---------- */
+function renderPredict(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const bmp=DIGIT_BITMAPS[7];
+  const cell=30, gridW=5*cell;
+  const gx=(W-gridW)/2 - 200, gy=90;
+  bmp.forEach((row,r)=>[...row].forEach((ch,c)=>{
+    svg.appendChild(el('rect',{x:gx+c*cell,y:gy+r*cell,width:cell-2,height:cell-2,rx:4,fill: ch==='1'? INK:'#00000010'}));
+  }));
+  const capIn=el('text',{x:gx+gridW/2,y:gy+7*cell+34,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'19',fill:'#4A453F'}); capIn.textContent='your drawing'; svg.appendChild(capIn);
+  svg.appendChild(arrow(gx+gridW+20,gy+3.5*cell,gx+gridW+90,gy+3.5*cell));
+  // network icon
+  const nx=gx+gridW+140, ny=gy+3.5*cell;
+  svg.appendChild(el('circle',{cx:nx,cy:ny,r:44,fill:'none',stroke:TEAL,'stroke-width':4}));
+  const brain=el('text',{x:nx,y:ny+8,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'16','font-weight':'700',fill:TEAL}); brain.textContent='net'; svg.appendChild(brain);
+  svg.appendChild(arrow(nx+44,ny,nx+100,ny));
+  mount(id,svg);
+  // bar chart under it
+  const values=[0.01,0.02,0.01,0.02,0.03,0.02,0.01,0.83,0.03,0.02];
+  const chartSvg=svgRoot(`0 0 ${W} 260`);
+  chartSvg.setAttribute('style','position:absolute;left:0;bottom:0;');
+  const n=10, chartW=650, chartH=170, x0=(W-chartW)/2;
+  const barW=chartW/n*0.6, gap=chartW/n; const y0=220;
+  values.forEach((v,i)=>{
+    const h=v*chartH; const x=x0+i*gap+(gap-barW)/2; const y=y0-h;
+    chartSvg.appendChild(el('rect',{x,y,width:barW,height:Math.max(h,4),rx:6,fill:i===7? YELLOW:mix(TEAL,PAPER,0.4), stroke:i===7?INK:'none','stroke-width':2}));
+    if(i===7){
+      const pct=el('text',{x:x+barW/2,y:y-14,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'20','font-weight':'700',fill:INK}); pct.textContent='83%'; chartSvg.appendChild(pct);
+    }
+    const lab=el('text',{x:x+barW/2,y:y0+26,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'16',fill:'#4A453F'}); lab.textContent=i; chartSvg.appendChild(lab);
+  });
+  document.getElementById(id).appendChild(chartSvg);
+}
+
+/* ---------- Recap step-flow ---------- */
+function renderStepFlow(id, steps){
+  const W=1620,H=420; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const n=steps.length; const pad=90; const gap=(W-pad*2)/(n-1);
+  const cy=H*0.42;
+  svg.appendChild(el('line',{x1:pad,y1:cy,x2:W-pad,y2:cy,stroke:INK,'stroke-width':3,'stroke-dasharray':'2 14','stroke-linecap':'round'}));
+  steps.forEach((s,i)=>{
+    const cx = pad + i*gap;
+    const g = el('g',{});
+    g.appendChild(el('circle',{cx,cy,r:56,fill:PAPER,stroke:INK,'stroke-width':4}));
+    g.appendChild(el('circle',{cx,cy,r:56,fill:s.color,opacity:'0.16'}));
+    drawStepIcon(g, s.icon, cx, cy);
+    const num = el('text',{x:cx,y:cy-78,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'20','fill':INK,'font-weight':'700'});
+    num.textContent = String(i+1).padStart(2,'0');
+    g.appendChild(num);
+    const label = el('text',{x:cx,y:cy+96,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'25','fill':INK,'font-weight':'600'});
+    label.textContent = s.label;
+    g.appendChild(label);
+    svg.appendChild(g);
+  });
+  mount(id, svg);
+}
+function drawStepIcon(g, type, cx, cy){
+  const s = 22;
+  if(type==='camera'){
+    g.appendChild(el('rect',{x:cx-s,y:cy-s*0.6,width:s*2,height:s*1.2,rx:6,fill:'none',stroke:INK,'stroke-width':2.5}));
+    g.appendChild(el('circle',{cx,cy:cy,r:s*0.5,fill:'none',stroke:INK,'stroke-width':2.5}));
+  } else if(type==='grid'){
+    for(let r=0;r<2;r++) for(let c=0;c<2;c++){
+      g.appendChild(el('rect',{x:cx-s+c*s, y:cy-s+r*s, width:s-3, height:s-3, fill:INK, opacity: (r+c)%2? '0.35':'0.85'}));
+    }
+  } else if(type==='kernel'){
+    g.appendChild(el('rect',{x:cx-s,y:cy-s,width:s*2,height:s*2,fill:'none',stroke:INK,'stroke-width':2.5}));
+    g.appendChild(el('line',{x1:cx-s,y1:cy,x2:cx+s,y2:cy,stroke:INK,'stroke-width':1.5}));
+    g.appendChild(el('line',{x1:cx,y1:cy-s,x2:cx,y2:cy+s,stroke:INK,'stroke-width':1.5}));
+  } else if(type==='neuron'){
+    g.appendChild(el('circle',{cx,cy,r:s*0.55,fill:INK}));
+    [0,72,144,216,288].forEach(a=>{
+      const rad=a*Math.PI/180;
+      g.appendChild(el('line',{x1:cx,y1:cy,x2:cx+Math.cos(rad)*s*1.6,y2:cy+Math.sin(rad)*s*1.6,stroke:INK,'stroke-width':2}));
+    });
+  } else if(type==='loss'){
+    g.appendChild(el('path',{d:`M${cx-s},${cy-s} Q${cx},${cy+s*1.2} ${cx+s},${cy-s}`,fill:'none',stroke:INK,'stroke-width':2.5}));
+    g.appendChild(el('circle',{cx:cx-s*0.4,cy:cy-s*0.2,r:5,fill:CORAL}));
+  } else if(type==='flag'){
+    g.appendChild(el('path',{d:`M${cx-6},${cy-s} L${cx-6},${cy+s} M${cx-6},${cy-s} L${cx+s},${cy-s*0.6} L${cx-6},${cy-s*0.1} Z`,fill:TEAL,stroke:INK,'stroke-width':2}));
+  }
+}
+
+/* ===========================================
+   SYNTAX HIGHLIGHTER — tiny, self-contained
+   =========================================== */
+function highlightPython(code){
+  const escaped = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const pattern = /(#[^\n]*)|('[^']*'|"[^"]*")|\b(def|class|for|in|return|import|if|else|elif|while|self|range)\b|\b(\d+\.?\d*)\b/g;
+  return escaped.replace(pattern, (match, comment, str, kw, num) => {
+    if(comment) return '<span class="tok-c">'+comment+'</span>';
+    if(str) return '<span class="tok-s">'+str+'</span>';
+    if(kw) return '<span class="tok-k">'+kw+'</span>';
+    if(num) return '<span class="tok-n">'+num+'</span>';
+    return match;
+  });
+}
+document.querySelectorAll('.code-card code').forEach(node=>{
+  node.innerHTML = highlightPython(node.textContent);
+});
+
+/* ===========================================
+   RENDER ALL DIAGRAMS
+   =========================================== */
+renderDataset('dg-dataset');
+renderArch('dg-arch');
+renderTrainLoop('dg-trainloop');
+renderPredict('dg-predict');
+renderStepFlow('dg-recap', [
+  {icon:'camera',label:'Pixels',color:CORAL},
+  {icon:'kernel',label:'Filters',color:YELLOW},
+  {icon:'neuron',label:'Neurons',color:TEAL},
+  {icon:'loss',label:'Training',color:SKY},
+  {icon:'flag',label:'Prediction',color:CORAL},
+]);
+
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   =========================================== */
+class SlidePresentation{
+  constructor(){
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.currentSlide = 0;
+    this.stage = document.getElementById('deckStage');
+    this.dotsWrap = document.getElementById('dotsWrap');
+    this.progressText = document.getElementById('progressText');
+    this.buildDots();
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupWheelNav();
+    document.getElementById('prevBtn').addEventListener('click', ()=>this.showSlide(this.currentSlide-1));
+    document.getElementById('nextBtn').addEventListener('click', ()=>this.showSlide(this.currentSlide+1));
+    this.showSlide(0);
+  }
+  buildDots(){
+    this.dots = this.slides.map((s,i)=>{
+      const b=document.createElement('button');
+      b.setAttribute('aria-label','Go to slide '+(i+1));
+      b.addEventListener('click',()=>this.showSlide(i));
+      this.dotsWrap.appendChild(b);
+      return b;
+    });
+  }
+  setupStageScale(){
+    const scale=()=>{
+      const factor=Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x=(window.innerWidth-1920*factor)/2, y=(window.innerHeight-1080*factor)/2;
+      this.stage.style.transform=`translate(${x}px,${y}px) scale(${factor})`;
+    };
+    scale(); window.addEventListener('resize',scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown',(e)=>{
+      if(e.target.getAttribute && e.target.getAttribute('contenteditable')==='true') return;
+      if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ e.preventDefault(); this.showSlide(this.currentSlide+1); }
+      else if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); this.showSlide(this.currentSlide-1); }
+      else if(e.key==='Home'){ this.showSlide(0); }
+      else if(e.key==='End'){ this.showSlide(this.slides.length-1); }
+    });
+  }
+  setupTouchNav(){
+    let startX=0;
+    this.stage.addEventListener('touchstart',(e)=>{ startX=e.touches[0].clientX; },{passive:true});
+    this.stage.addEventListener('touchend',(e)=>{
+      const dx=e.changedTouches[0].clientX-startX;
+      if(Math.abs(dx)>60){ dx<0? this.showSlide(this.currentSlide+1): this.showSlide(this.currentSlide-1); }
+    },{passive:true});
+  }
+  setupWheelNav(){
+    let locked=false;
+    window.addEventListener('wheel',(e)=>{
+      if(locked) return;
+      if(Math.abs(e.deltaY)<24) return;
+      locked=true;
+      e.deltaY>0? this.showSlide(this.currentSlide+1): this.showSlide(this.currentSlide-1);
+      setTimeout(()=>locked=false, 650);
+    },{passive:true});
+  }
+  showSlide(index){
+    this.currentSlide = Math.max(0, Math.min(index, this.slides.length-1));
+    this.slides.forEach((slide,i)=>{
+      slide.classList.toggle('active', i===this.currentSlide);
+      slide.classList.toggle('visible', i===this.currentSlide);
+    });
+    this.dots.forEach((d,i)=>d.classList.toggle('active', i===this.currentSlide));
+    this.progressText.textContent = (this.currentSlide+1)+' / '+this.slides.length;
+  }
+}
+const presentation = new SlidePresentation();
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+const editor = {
+  isActive:false,
+  storageKey:'cv-workshop-exercise-v1',
+  toggleEditMode(){
+    this.isActive = !this.isActive;
+    document.querySelectorAll('.editable').forEach(el=>el.setAttribute('contenteditable', this.isActive?'true':'false'));
+    document.getElementById('editToggle').classList.toggle('active', this.isActive);
+    document.getElementById('exportToggle').classList.toggle('show', this.isActive);
+    if(!this.isActive) this.save();
+  },
+  save(){
+    const data={};
+    document.querySelectorAll('.editable').forEach((el,i)=>{ data[i]=el.innerHTML; });
+    try{ localStorage.setItem(this.storageKey, JSON.stringify(data)); }catch(e){}
+  },
+  restore(){
+    try{
+      const raw=localStorage.getItem(this.storageKey);
+      if(!raw) return;
+      const data=JSON.parse(raw);
+      document.querySelectorAll('.editable').forEach((el,i)=>{ if(data[i]!==undefined) el.innerHTML=data[i]; });
+    }catch(e){}
+  }
+};
+editor.restore();
+
+const hotzone=document.getElementById('editHotzone');
+const editToggle=document.getElementById('editToggle');
+let hideTimeout=null;
+hotzone.addEventListener('mouseenter',()=>{ clearTimeout(hideTimeout); editToggle.classList.add('show'); });
+hotzone.addEventListener('mouseleave',()=>{ hideTimeout=setTimeout(()=>{ if(!editor.isActive) editToggle.classList.remove('show'); },400); });
+editToggle.addEventListener('mouseenter',()=>clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave',()=>{ hideTimeout=setTimeout(()=>{ if(!editor.isActive) editToggle.classList.remove('show'); },400); });
+hotzone.addEventListener('click',()=>editor.toggleEditMode());
+editToggle.addEventListener('click',()=>editor.toggleEditMode());
+document.addEventListener('keydown',(e)=>{
+  if((e.key==='e'||e.key==='E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable')==='true')){
+    editor.toggleEditMode();
+  }
+});
+document.getElementById('exportToggle').addEventListener('click',()=>{
+  editor.save();
+  const blob=new Blob(['<!DOCTYPE html>\n'+document.documentElement.outerHTML],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='cv-workshop-exercise.html'; a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teach a Computer to See — A Computer Vision Workshop</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23FBF3E4'/%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%23221F26' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='14' fill='%230E8C82'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Space+Grotesk:wght@400;500;600;700&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   DESIGN TOKENS — Vision Lab Notebook system
+   =========================================== */
+:root{
+  --paper:#FBF3E4;
+  --paper-light:#FFFDF8;
+  --ink:#221F26;
+  --ink-soft:#4A453F;
+  --line:#E4D6B8;
+  --coral:#FF6B4A;
+  --teal:#0E8C82;
+  --yellow:#FFC145;
+  --sky:#3E8FD6;
+
+  --code-bg:#221F26;
+  --code-text:#F3ECDD;
+  --code-kw:#FF8A68;
+  --code-str:#FFD37A;
+  --code-num:#7EC2F3;
+  --code-com:#948C7C;
+
+  --font-display:'Bricolage Grotesque',sans-serif;
+  --font-body:'Space Grotesk',sans-serif;
+  --font-hand:'Caveat',cursive;
+  --font-mono:'JetBrains Mono',monospace;
+
+  --ease:cubic-bezier(0.16,1,0.3,1);
+  --stage-bg:#151316;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+
+/* ===========================================
+   FIXED 16:9 STAGE — mandatory base (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000);}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000);}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff);}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff);}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1;}
+img,video,canvas,svg{max-width:100%;max-height:100%;}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000;}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff;}
+  .deck-viewport{position:static;overflow:visible;background:#fff;}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none;}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always;}
+  .slide:last-child{break-after:auto;page-break-after:auto;}
+  .deck-controls{display:none!important;}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important;}}
+
+/* ===========================================
+   SHARED SLIDE CHROME
+   =========================================== */
+.paper-bg{
+  position:relative;
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px),
+    var(--paper);
+  background-size:44px 44px, 44px 44px, auto;
+  background-position:-1px -1px,-1px -1px;
+  color:var(--ink);
+  font-family:var(--font-body);
+}
+.paper-bg::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 900px 560px at 8% 96%, color-mix(in srgb, var(--tint-a,#FF6B4A) 20%, transparent), transparent 70%),
+    radial-gradient(ellipse 760px 560px at 96% 4%, color-mix(in srgb, var(--tint-b,#0E8C82) 16%, transparent), transparent 70%);
+}
+
+.step-tag{
+  position:absolute; top:84px; left:150px; z-index:3;
+  font-family:var(--font-hand); font-size:32px; color:#7a5a26;
+  background:rgba(255,193,69,0.38); padding:6px 24px; border-radius:3px;
+  transform:rotate(-2.5deg);
+}
+.brand-logo{
+  position:absolute; top:70px; right:150px; z-index:3;
+  height:86px; width:auto;
+  background:#fff; padding:10px 16px; border-radius:12px;
+  border:2.5px solid var(--ink); box-shadow:5px 5px 0 var(--ink);
+  box-sizing:content-box;
+}
+
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease);}
+.slide.visible .reveal{opacity:1;transform:translateY(0);}
+.reveal.r1{transition-delay:.05s;}
+.reveal.r2{transition-delay:.15s;}
+.reveal.r3{transition-delay:.28s;}
+.reveal.r4{transition-delay:.4s;}
+.reveal.r5{transition-delay:.52s;}
+
+.headline{
+  position:absolute; left:150px; top:236px; width:830px; z-index:2;
+  font-family:var(--font-display); font-weight:800; font-size:70px; line-height:1.08; letter-spacing:-1px;
+  color:var(--ink);
+}
+.headline .accent{color:var(--coral);}
+.headline .accent-teal{color:var(--teal);}
+.oneliner{
+  position:absolute; left:150px; top:466px; width:790px; z-index:2;
+  font-size:27px; line-height:1.55; color:var(--ink-soft); font-weight:400;
+}
+.oneliner b{color:var(--teal); font-weight:600;}
+.oneliner b.c{color:var(--coral);}
+
+.code-card{
+  position:absolute; left:150px; top:642px; width:790px; z-index:2;
+  background:var(--code-bg); border-radius:16px; padding:0 0 26px;
+  box-shadow:0 18px 40px rgba(34,31,38,0.28), 0 0 0 2px var(--ink);
+  transform:rotate(-0.5deg);
+}
+.code-card-head{
+  display:flex; align-items:center; gap:10px; padding:16px 24px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:18px;
+}
+.code-card-head .dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
+.dot.d1{background:var(--coral);} .dot.d2{background:var(--yellow);} .dot.d3{background:var(--teal);}
+.filename{margin-left:10px; font-family:var(--font-mono); font-size:16px; color:var(--code-com);}
+.code-card pre{margin:0; padding:0 26px;}
+.code-card code{
+  font-family:var(--font-mono); font-size:22px; line-height:1.68; color:var(--code-text);
+  white-space:pre;
+}
+.tok-k{color:var(--code-kw); font-weight:600;} .tok-s{color:var(--code-str);} .tok-n{color:var(--code-num);} .tok-c{color:var(--code-com); font-style:italic;}
+
+.diagram-stage{
+  position:absolute; right:130px; top:200px; width:770px; height:700px; z-index:2;
+}
+.diagram-caption{
+  position:absolute; right:130px; bottom:96px; width:770px; text-align:right; z-index:2;
+  font-family:var(--font-mono); font-size:16px; color:var(--ink-soft); letter-spacing:0.5px;
+}
+
+/* ===========================================
+   TITLE / CLOSING SLIDE SPECIFICS
+   =========================================== */
+.tape{position:absolute; top:88px; left:150px; font-family:var(--font-hand); font-size:34px; color:#8a6d3b; transform:rotate(-3deg); background:rgba(255,193,69,0.35); padding:6px 22px; border-radius:2px; z-index:3;}
+.title-block{position:absolute; left:150px; top:250px; width:1050px; z-index:2;}
+.title-block h1{font-family:var(--font-display); font-weight:800; font-size:106px; line-height:1.04; letter-spacing:-1px; color:var(--ink);}
+.title-block .accent{color:var(--coral);}
+.title-block p{margin-top:36px; font-size:30px; line-height:1.6; color:var(--ink-soft); max-width:820px; font-weight:400;}
+.title-block p b{color:var(--teal); font-weight:600;}
+.chips{position:absolute; left:150px; bottom:118px; display:flex; gap:22px; z-index:2;}
+.chip{font-family:var(--font-body); font-weight:600; font-size:20px; color:var(--ink); background:#fff; border:2.5px solid var(--ink); border-radius:100px; padding:14px 28px; box-shadow:5px 5px 0 var(--ink);}
+.chip.c1{background:var(--coral); color:#fff;} .chip.c2{background:var(--teal); color:#fff;} .chip.c3{background:var(--yellow); color:var(--ink);}
+.aperture-wrap{position:absolute; right:150px; top:50%; transform:translateY(-50%); width:480px; height:480px; z-index:2;}
+
+/* ===========================================
+   DECK CONTROLS (outside slide design system)
+   =========================================== */
+.deck-controls{display:flex; align-items:center; gap:18px; background:rgba(34,31,38,0.85); backdrop-filter:blur(6px); padding:12px 20px; border-radius:100px; box-shadow:0 10px 30px rgba(0,0,0,0.35);}
+.nav-btn{width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,0.1);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.nav-btn:hover{background:var(--coral);}
+.dots{display:flex; gap:8px;}
+.dots button{width:9px;height:9px;border-radius:50%;border:none;background:rgba(255,255,255,0.28);cursor:pointer;padding:0;transition:transform .2s, background .2s;}
+.dots button.active{background:var(--yellow); transform:scale(1.5);}
+.progress-text{font-family:var(--font-mono); font-size:14px; color:#f3ecdd; letter-spacing:1px; min-width:52px; text-align:center;}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer;}
+.edit-toggle{position:fixed; top:14px; left:14px; width:44px; height:44px; border-radius:50%; border:none; background:var(--ink); color:var(--paper); font-size:18px; cursor:pointer; opacity:0; pointer-events:none; transition:opacity .3s ease; z-index:10001; display:flex; align-items:center; justify-content:center;}
+.edit-toggle.show,.edit-toggle.active{opacity:1; pointer-events:auto;}
+.edit-toggle.active{background:var(--coral);}
+[contenteditable="true"]{outline:2px dashed var(--coral); outline-offset:4px; cursor:text;}
+.export-toggle{position:fixed; top:14px; left:68px; width:44px; height:44px; border-radius:50%; border:none; background:var(--teal); color:#fff; font-size:16px; cursor:pointer; opacity:0; pointer-events:none; transition:opacity .3s ease; z-index:10001; display:flex; align-items:center; justify-content:center;}
+.export-toggle.show{opacity:1; pointer-events:auto;}
+
+/* ===========================================
+   SVG DIAGRAM HELPERS — shared visual language
+   =========================================== */
+.dg-ink{fill:var(--ink);} .dg-coral{fill:var(--coral);} .dg-teal{fill:var(--teal);} .dg-yellow{fill:var(--yellow);} .dg-sky{fill:var(--sky);}
+.dg-stroke{stroke:var(--ink); fill:none;}
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ============================================================
+     SLIDE 00 — TITLE
+     ============================================================ -->
+<section class="slide active visible" data-title="Title">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FFC145;--tint-b:#0E8C82;">
+    <div class="tape editable" contenteditable="false">Workshop day one</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+
+    <div class="title-block">
+      <h1 class="reveal r1 editable" contenteditable="false">Teach a Computer<br>to <span class="accent">See</span></h1>
+      <p class="reveal r2 editable" contenteditable="false">Every image is secretly just numbers. We'll open that box together, then build and train <b>a tiny neural network</b> that reads your handwritten digits.</p>
+    </div>
+
+    <div class="chips reveal r3">
+      <span class="chip c1 editable" contenteditable="false">Pixels &amp; filters</span>
+      <span class="chip c2 editable" contenteditable="false">Neural nets</span>
+      <span class="chip c3 editable" contenteditable="false">Live demo</span>
+    </div>
+
+    <div class="aperture-wrap reveal r4" id="dg-title"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 01 — ROADMAP
+     ============================================================ -->
+<section class="slide" data-title="Roadmap">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#3E8FD6;--tint-b:#FF6B4A;">
+    <div class="step-tag">Where we're headed</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1" style="width:1150px;">What We'll Build, <span class="accent">Step by Step</span></div>
+    <div class="oneliner" style="width:1150px;top:400px;">By the end of today you'll understand every gear inside a real image-recognition model &mdash; and you'll have trained one yourself.</div>
+    <div class="diagram-stage" style="left:150px; right:auto; top:520px; width:1620px; height:420px;" id="dg-roadmap"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 02 — WHAT IS COMPUTER VISION
+     ============================================================ -->
+<section class="slide" data-title="What is CV">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#0E8C82;--tint-b:#FFC145;">
+    <div class="step-tag">01 &middot; the big idea</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Computer Vision: Teaching Software to <span class="accent-teal">Understand</span> Images</div>
+    <div class="oneliner reveal r2" style="top:470px;">It's the field that lets computers turn raw pixels into meaning &mdash; spotting faces, reading street signs, or recognizing a handwritten <b>7</b>.</div>
+    <div class="oneliner reveal r3" style="top:600px; font-family:var(--font-mono); font-size:20px; color:var(--ink-soft);">camera &rarr; pixels &rarr; math &rarr; a label a human understands</div>
+    <div class="diagram-stage" id="dg-cvintro"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 03 — IMAGES ARE JUST NUMBERS
+     ============================================================ -->
+<section class="slide" data-title="Pixels">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FF6B4A;--tint-b:#3E8FD6;">
+    <div class="step-tag">02 &middot; pixels</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Every Image Is Secretly <span class="accent">Just Numbers</span></div>
+    <div class="oneliner reveal r2">A grayscale image is a grid of pixels &mdash; each one a brightness value from <b>0</b> (black) to <b>255</b> (white).</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">read_pixels.py</span></div>
+      <pre><code class="code-py">image.shape        # (28, 28)  &mdash; 28 rows, 28 columns
+image[10][14]      # 231        &mdash; brightness of one pixel
+image[3][3]        # 12         &mdash; almost black</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-grayscale"></div>
+    <div class="diagram-caption">a zoomed-in corner of a digit, as numbers</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 04 — COLOR IMAGES
+     ============================================================ -->
+<section class="slide" data-title="RGB">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#3E8FD6;--tint-b:#FF6B4A;">
+    <div class="step-tag">02 &middot; pixels</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Color = <span class="accent-teal">Three Grids</span> Stacked Together</div>
+    <div class="oneliner reveal r2">Color images add Red, Green, and Blue channels &mdash; one grid per color, layered like transparent sheets of glass.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">color_channels.py</span></div>
+      <pre><code class="code-py">image.shape        # (28, 28, 3)
+image[10][14]      # [231, 84, 12]  &mdash; R, G, B
+image[10][14][0]   # 231            &mdash; just the red value</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-rgb"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 05 — CONVOLUTION
+     ============================================================ -->
+<section class="slide" data-title="Convolution">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#0E8C82;--tint-b:#FFC145;">
+    <div class="step-tag">03 &middot; filters</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Filters Slide a <span class="accent">Tiny Window</span> Across the Image</div>
+    <div class="oneliner reveal r2">A kernel is a small grid of numbers that slides over the image, multiplying and adding as it goes.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">convolve.py</span></div>
+      <pre><code class="code-py">def convolve(patch, kernel):
+    total = 0
+    for r in range(3):
+        for c in range(3):
+            total += patch[r][c] * kernel[r][c]
+    return total</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-conv"></div>
+    <div class="diagram-caption">the 3&times;3 window slides one step at a time</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 06 — FEATURE MAPS / EDGES
+     ============================================================ -->
+<section class="slide" data-title="Feature maps">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FFC145;--tint-b:#3E8FD6;">
+    <div class="step-tag">03 &middot; filters</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Different Filters Reveal <span class="accent-teal">Different Features</span></div>
+    <div class="oneliner reveal r2">An edge-detecting filter lights up wherever brightness changes sharply &mdash; the outline of the digit.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">edge_kernel.py</span></div>
+      <pre><code class="code-py">edge_kernel = [
+    [-1,  0,  1],
+    [-2,  0,  2],
+    [-1,  0,  1],
+]  # lights up vertical edges</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-edges"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 07 — THE NEURON
+     ============================================================ -->
+<section class="slide" data-title="Neuron">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FF6B4A;--tint-b:#0E8C82;">
+    <div class="step-tag">04 &middot; neurons</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">A Neuron <span class="accent">Weighs Its Evidence</span></div>
+    <div class="oneliner reveal r2">Each neuron multiplies every input by a weight, adds them up, and asks: is this enough to fire?</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">neuron.py</span></div>
+      <pre><code class="code-py">def neuron(inputs, weights, bias):
+    total = sum(i * w for i, w in zip(inputs, weights))
+    return total + bias</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-neuron"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 08 — LAYERS / NETWORK
+     ============================================================ -->
+<section class="slide" data-title="Layers">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#0E8C82;--tint-b:#FF6B4A;">
+    <div class="step-tag">04 &middot; neurons</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Stack Thousands of Neurons Into <span class="accent-teal">Layers</span></div>
+    <div class="oneliner reveal r2">Our network takes <b>784</b> pixel values in, thinks with a hidden layer, and outputs <b class="c">10</b> digit scores.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">layers.py</span></div>
+      <pre><code class="code-py">W1 = random_matrix(784, 128)   # input &rarr; hidden
+W2 = random_matrix(128, 10)    # hidden &rarr; output</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-layers"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 09 — ACTIVATION FUNCTIONS
+     ============================================================ -->
+<section class="slide" data-title="Activation">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FFC145;--tint-b:#0E8C82;">
+    <div class="step-tag">05 &middot; nonlinearity</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Activation Functions Let the Network <span class="accent">Bend</span></div>
+    <div class="oneliner reveal r2">Without them, stacking layers is pointless. <b>ReLU</b> keeps positive signals and zeroes out the rest.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">relu.py</span></div>
+      <pre><code class="code-py">def relu(x):
+    return max(0, x)</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-activation"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 10 — SOFTMAX
+     ============================================================ -->
+<section class="slide" data-title="Softmax">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#3E8FD6;--tint-b:#FFC145;">
+    <div class="step-tag">05 &middot; nonlinearity</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Softmax Turns Scores Into <span class="accent-teal">Confidence</span></div>
+    <div class="oneliner reveal r2">The output layer's raw numbers become a confidence percentage for each digit, 0 through 9.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">softmax.py</span></div>
+      <pre><code class="code-py">import math
+
+def softmax(scores):
+    exps = [math.exp(s) for s in scores]
+    return [e / sum(exps) for e in exps]</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-softmax"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 11 — LOSS
+     ============================================================ -->
+<section class="slide" data-title="Loss">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FF6B4A;--tint-b:#3E8FD6;">
+    <div class="step-tag">06 &middot; training</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Loss Measures <span class="accent">How Wrong</span> the Guess Was</div>
+    <div class="oneliner reveal r2">We compare the network's confidence to the true answer &mdash; a big gap means a big loss.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">loss.py</span></div>
+      <pre><code class="code-py">def loss(predicted, true_label):
+    return -math.log(predicted[true_label])</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-loss"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 12 — GRADIENT DESCENT
+     ============================================================ -->
+<section class="slide" data-title="Gradient descent">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#0E8C82;--tint-b:#FF6B4A;">
+    <div class="step-tag">06 &middot; training</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1">Gradient Descent <span class="accent-teal">Rolls the Loss Downhill</span></div>
+    <div class="oneliner reveal r2">After every mistake, we nudge each weight slightly in the direction that reduces the loss.</div>
+    <div class="code-card reveal r3">
+      <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">update.py</span></div>
+      <pre><code class="code-py">weight = weight - learning_rate * gradient</code></pre>
+    </div>
+    <div class="diagram-stage reveal r4" id="dg-descent"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 13 — EXERCISE HANDOFF
+     ============================================================ -->
+<section class="slide" data-title="Exercise handoff">
+  <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FFC145;--tint-b:#0E8C82;">
+    <div class="step-tag">07 &middot; the exercise</div>
+    <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
+    <div class="headline reveal r1" style="width:1300px;">Time to Build It <span class="accent">Yourself</span></div>
+    <div class="oneliner reveal r2" style="width:900px;">You've seen every piece &mdash; pixels, filters, neurons, training. Now let's put them together, train a real digit-recognizing network, and test it on your own handwriting.</div>
+    <a href="exercise.html" class="chip c1 reveal r3" style="position:absolute; left:150px; top:600px; font-size:28px; padding:22px 44px; text-decoration:none; display:inline-block;">Open the exercise &rarr;</a>
+    <div class="aperture-wrap reveal r4" id="dg-handoff"></div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- Deck controls (outside the slide design system) -->
+<div class="deck-controls">
+  <button class="nav-btn" id="prevBtn" aria-label="Previous slide">&#8592;</button>
+  <div class="dots" id="dotsWrap"></div>
+  <span class="progress-text" id="progressText">1 / 14</span>
+  <button class="nav-btn" id="nextBtn" aria-label="Next slide">&#8594;</button>
+</div>
+
+<!-- Inline editing affordances -->
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">&#9998;</button>
+<button class="export-toggle" id="exportToggle" title="Export HTML">&#8681;</button>
+
+<script>
+/* ===========================================
+   SVG DIAGRAM RENDERERS
+   Small self-contained helpers — no external libs.
+   Each render function mounts one SVG into a container div.
+   =========================================== */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function svgRoot(vb){ return el('svg', {viewBox:vb, preserveAspectRatio:'xMidYMid meet'}); }
+function mount(id, svg){ const host=document.getElementById(id); if(!host) return; host.innerHTML=''; host.appendChild(svg); }
+function hexToRgb(hex){ hex=hex.replace('#',''); const n=parseInt(hex,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function mix(hexA,hexB,t){ const a=hexToRgb(hexA),b=hexToRgb(hexB); const l=(x,y)=>Math.round(x+(y-x)*t); return `rgb(${l(a[0],b[0])},${l(a[1],b[1])},${l(a[2],b[2])})`; }
+
+const INK='#221F26', PAPER='#FFFDF8', CORAL='#FF6B4A', TEAL='#0E8C82', YELLOW='#FFC145', SKY='#3E8FD6';
+
+/* 5x7 dot-matrix digit bitmaps */
+const DIGIT_BITMAPS = {
+  0:['01110','10001','10011','10101','11001','10001','01110'],
+  1:['00100','01100','00100','00100','00100','00100','01110'],
+  2:['01110','10001','00001','00010','00100','01000','11111'],
+  3:['11111','00010','00100','00010','00001','10001','01110'],
+  4:['00010','00110','01010','10010','11111','00010','00010'],
+  5:['11111','10000','11110','00001','00001','10001','01110'],
+  6:['00110','01000','10000','11110','10001','10001','01110'],
+  7:['11111','00001','00010','00100','01000','01000','01000'],
+  8:['01110','10001','10001','01110','10001','10001','01110'],
+  9:['01110','10001','10001','01111','00001','00010','01100']
+};
+
+/* ---------- Title / aperture icon ---------- */
+function renderAperture(id){
+  const svg = svgRoot('0 0 480 480');
+  svg.appendChild(el('circle',{cx:240,cy:240,r:210,stroke:INK,'stroke-width':3,'stroke-dasharray':'2 14','stroke-linecap':'round',fill:'none'}));
+  svg.appendChild(el('circle',{cx:240,cy:240,r:165,stroke:CORAL,'stroke-width':3,fill:'none'}));
+  const colors=[CORAL,YELLOW,TEAL,SKY,CORAL,YELLOW];
+  for(let i=0;i<6;i++){
+    const p = el('path',{d:'M240,240 L240,100 A140,140 0 0,1 361,170 Z', fill:colors[i], opacity:'0.16', transform:`rotate(${i*60} 240 240)`});
+    svg.appendChild(p);
+  }
+  svg.appendChild(el('circle',{cx:240,cy:240,r:46,fill:TEAL}));
+  svg.appendChild(el('circle',{cx:255,cy:225,r:12,fill:'#fff',opacity:'0.9'}));
+  mount(id, svg);
+}
+
+/* ---------- Roadmap / recap step-flow ---------- */
+function renderStepFlow(id, steps){
+  const W=1620,H=420; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const n=steps.length; const pad=90; const gap=(W-pad*2)/(n-1);
+  const cy=H*0.42;
+  // connecting dashed line
+  svg.appendChild(el('line',{x1:pad,y1:cy,x2:W-pad,y2:cy,stroke:INK,'stroke-width':3,'stroke-dasharray':'2 14','stroke-linecap':'round'}));
+  steps.forEach((s,i)=>{
+    const cx = pad + i*gap;
+    const g = el('g',{});
+    g.appendChild(el('circle',{cx,cy,r:56,fill:PAPER,stroke:INK,'stroke-width':4}));
+    g.appendChild(el('circle',{cx,cy,r:56,fill:s.color,opacity:'0.16'}));
+    // icon
+    drawStepIcon(g, s.icon, cx, cy);
+    const num = el('text',{x:cx,y:cy-78,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'20','fill':INK,'font-weight':'700'});
+    num.textContent = String(i+1).padStart(2,'0');
+    g.appendChild(num);
+    const label = el('text',{x:cx,y:cy+96,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'25','fill':INK,'font-weight':'600'});
+    label.textContent = s.label;
+    g.appendChild(label);
+    svg.appendChild(g);
+  });
+  mount(id, svg);
+}
+function drawStepIcon(g, type, cx, cy){
+  const s = 22;
+  if(type==='camera'){
+    g.appendChild(el('rect',{x:cx-s,y:cy-s*0.6,width:s*2,height:s*1.2,rx:6,fill:'none',stroke:INK,'stroke-width':2.5}));
+    g.appendChild(el('circle',{cx,cy:cy,r:s*0.5,fill:'none',stroke:INK,'stroke-width':2.5}));
+  } else if(type==='grid'){
+    for(let r=0;r<2;r++) for(let c=0;c<2;c++){
+      g.appendChild(el('rect',{x:cx-s+c*s, y:cy-s+r*s, width:s-3, height:s-3, fill:INK, opacity: (r+c)%2? '0.35':'0.85'}));
+    }
+  } else if(type==='kernel'){
+    g.appendChild(el('rect',{x:cx-s,y:cy-s,width:s*2,height:s*2,fill:'none',stroke:INK,'stroke-width':2.5}));
+    g.appendChild(el('line',{x1:cx-s,y1:cy,x2:cx+s,y2:cy,stroke:INK,'stroke-width':1.5}));
+    g.appendChild(el('line',{x1:cx,y1:cy-s,x2:cx,y2:cy+s,stroke:INK,'stroke-width':1.5}));
+  } else if(type==='neuron'){
+    g.appendChild(el('circle',{cx,cy,r:s*0.55,fill:INK}));
+    [0,72,144,216,288].forEach(a=>{
+      const rad=a*Math.PI/180;
+      g.appendChild(el('line',{x1:cx,y1:cy,x2:cx+Math.cos(rad)*s*1.6,y2:cy+Math.sin(rad)*s*1.6,stroke:INK,'stroke-width':2}));
+    });
+  } else if(type==='loss'){
+    g.appendChild(el('path',{d:`M${cx-s},${cy-s} Q${cx},${cy+s*1.2} ${cx+s},${cy-s}`,fill:'none',stroke:INK,'stroke-width':2.5}));
+    g.appendChild(el('circle',{cx:cx-s*0.4,cy:cy-s*0.2,r:5,fill:CORAL}));
+  } else if(type==='flag'){
+    g.appendChild(el('path',{d:`M${cx-6},${cy-s} L${cx-6},${cy+s} M${cx-6},${cy-s} L${cx+s},${cy-s*0.6} L${cx-6},${cy-s*0.1} Z`,fill:TEAL,stroke:INK,'stroke-width':2}));
+  }
+}
+
+/* ---------- CV intro flow ---------- */
+function renderCVIntro(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const cy=H*0.5;
+  const xs=[100,320,540,700];
+  // camera
+  const g1=el('g',{});
+  g1.appendChild(el('rect',{x:xs[0]-70,y:cy-46,width:140,height:92,rx:14,fill:PAPER,stroke:INK,'stroke-width':4}));
+  g1.appendChild(el('circle',{cx:xs[0],cy:cy,r:32,fill:'none',stroke:CORAL,'stroke-width':5}));
+  g1.appendChild(el('rect',{x:xs[0]-24,y:cy-70,width:48,height:20,rx:4,fill:INK}));
+  svg.appendChild(g1);
+  // arrow
+  svg.appendChild(arrow(xs[0]+90,cy,xs[1]-70,cy));
+  // pixel grid
+  const g2=el('g',{});
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+    const v=[10,80,200,240][(r*4+c)%4];
+    g2.appendChild(el('rect',{x:xs[1]-56+c*28,y:cy-56+r*28,width:26,height:26,fill:mix(INK,PAPER,v/255)}));
+  }
+  svg.appendChild(g2);
+  svg.appendChild(arrow(xs[1]+70,cy,xs[2]-90,cy));
+  // brain / math
+  const g3=el('g',{});
+  g3.appendChild(el('circle',{cx:xs[2],cy,r:58,fill:'none',stroke:TEAL,'stroke-width':5}));
+  const sig = el('text',{x:xs[2],y:cy+16,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'40','fill':TEAL,'font-weight':'700'});
+  sig.textContent='f(x)';
+  g3.appendChild(sig);
+  svg.appendChild(g3);
+  svg.appendChild(arrow(xs[2]+68,cy,xs[3]-60,cy));
+  // label output
+  const g4=el('g',{});
+  g4.appendChild(el('rect',{x:xs[3]-58,y:cy-58,width:116,height:116,rx:20,fill:YELLOW}));
+  const num = el('text',{x:xs[3],y:cy+30,'text-anchor':'middle','font-family':'Bricolage Grotesque, sans-serif','font-size':'76','fill':INK,'font-weight':'800'});
+  num.textContent='7';
+  g4.appendChild(num);
+  svg.appendChild(g4);
+
+  ['a photo','a grid of numbers','a model','a label'].forEach((t,i)=>{
+    const txt=el('text',{x:xs[i],y:cy+130,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'21','fill':'#4A453F'});
+    txt.textContent=t;
+    svg.appendChild(txt);
+  });
+  mount(id,svg);
+}
+function arrow(x1,y1,x2,y2){
+  const g=el('g',{});
+  g.appendChild(el('line',{x1,y1,x2,y2,stroke:INK,'stroke-width':3}));
+  const angle=Math.atan2(y2-y1,x2-x1);
+  const ah=10;
+  const p1x=x2-ah*Math.cos(angle-0.4), p1y=y2-ah*Math.sin(angle-0.4);
+  const p2x=x2-ah*Math.cos(angle+0.4), p2y=y2-ah*Math.sin(angle+0.4);
+  g.appendChild(el('path',{d:`M${x2},${y2} L${p1x},${p1y} M${x2},${y2} L${p2x},${p2y}`,stroke:INK,'stroke-width':3,'stroke-linecap':'round'}));
+  return g;
+}
+
+/* ---------- Grayscale pixel zoom ---------- */
+function renderGrayscale(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  // sample values from digit "3" bitmap scaled up with intensity variation
+  const bmp = DIGIT_BITMAPS[3];
+  const rows=bmp.length, cols=bmp[0].length;
+  const cell=76, gap=6;
+  const gridW=cols*(cell+gap), gridH=rows*(cell+gap);
+  const x0=(W-gridW)/2, y0=60;
+  const g=el('g',{});
+  const values=[];
+  bmp.forEach((row,r)=>{
+    const vr=[];
+    [...row].forEach((ch,c)=>{
+      const base = ch==='1' ? 30+Math.random()*40 : 210+Math.random()*40;
+      vr.push(Math.round(base));
+    });
+    values.push(vr);
+  });
+  values.forEach((row,r)=>{
+    row.forEach((v,c)=>{
+      const x=x0+c*(cell+gap), y=y0+r*(cell+gap);
+      g.appendChild(el('rect',{x,y,width:cell,height:cell,rx:6,fill:mix('#000000','#ffffff',v/255),stroke:'#00000018'}));
+      if((r===1&&c===1)||(r===3&&c===2)||(r===5&&c===3)){
+        const t=el('text',{x:x+cell/2,y:y+cell/2+7,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'19','font-weight':'700','fill': v<128? '#FFC145':'#221F26'});
+        t.textContent=v;
+        g.appendChild(t);
+      }
+    });
+  });
+  svg.appendChild(g);
+  mount(id,svg);
+}
+
+/* ---------- RGB stacked channels ---------- */
+function renderRGB(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const size=300, offset=70;
+  const channels=[{c:'#E4574A',label:'R',dx:0,dy:120},{c:'#3FA66B',label:'G',dx:70,dy:60},{c:'#3E8FD6',label:'B',dx:140,dy:0}];
+  channels.forEach((ch,i)=>{
+    const g=el('g',{opacity:'0.92'});
+    const x=180+ch.dx, y=140+ch.dy;
+    g.appendChild(el('rect',{x,y,width:size,height:size,rx:16,fill:ch.c,opacity:'0.22',stroke:ch.c,'stroke-width':3}));
+    for(let r=0;r<5;r++) for(let c=0;c<5;c++){
+      g.appendChild(el('rect',{x:x+16+c*54,y:y+16+r*54,width:46,height:46,rx:6,fill:ch.c,opacity:(0.15+((r*5+c)%5)*0.14).toFixed(2)}));
+    }
+    const label=el('text',{x:x+size-34,y:y+38,'text-anchor':'middle','font-family':'Bricolage Grotesque, sans-serif','font-size':'30','font-weight':'800',fill:'#fff'});
+    label.textContent=ch.label;
+    g.appendChild(label);
+    svg.appendChild(g);
+  });
+  mount(id,svg);
+}
+
+/* ---------- Convolution sliding window ---------- */
+function renderConv(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const cols=7,rows=7,cell=46,gap=4;
+  const gridW=cols*(cell+gap), gridH=rows*(cell+gap);
+  const x0=(W-gridW)/2 - 30, y0=40;
+  const g=el('g',{});
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const v = 60+((r*7+c*13)%180);
+    g.appendChild(el('rect',{x:x0+c*(cell+gap),y:y0+r*(cell+gap),width:cell,height:cell,rx:6,fill:mix('#000000','#ffffff',v/255)}));
+  }
+  svg.appendChild(g);
+  // highlighted 3x3 window
+  const wr=2, wc=2;
+  const wx=x0+wc*(cell+gap)-4, wy=y0+wr*(cell+gap)-4;
+  const ww=3*(cell+gap)-gap+8, wh=ww;
+  svg.appendChild(el('rect',{x:wx,y:wy,width:ww,height:wh,rx:10,fill:'none',stroke:CORAL,'stroke-width':5}));
+  // motion arrow
+  svg.appendChild(arrow(wx+ww+10,wy+wh/2,wx+ww+70,wy+wh/2));
+
+  // small kernel matrix box below
+  const kx=x0, ky=y0+gridH+36;
+  const kernel=[[-1,0,1],[-2,0,2],[-1,0,1]];
+  svg.appendChild(el('rect',{x:kx,y:ky,width:170,height:170,rx:12,fill:'#221F26'}));
+  kernel.forEach((row,r)=>row.forEach((v,c)=>{
+    const t=el('text',{x:kx+30+c*56,y:ky+38+r*56,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'26','font-weight':'700',fill: v<0?'#FF8A68': v>0?'#7EC2F3':'#F3ECDD'});
+    t.textContent = (v>0? '+':'')+v;
+    svg.appendChild(t);
+  }));
+  const kl=el('text',{x:kx+85,y:ky+200,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'19','fill':'#4A453F'});
+  kl.textContent='the kernel (3×3)';
+  svg.appendChild(kl);
+  mount(id,svg);
+}
+
+/* ---------- Feature map before/after ---------- */
+function renderEdges(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const bmp=DIGIT_BITMAPS[8];
+  const rows=bmp.length, cols=bmp[0].length;
+  const cell=32, gap=3;
+  const gridW=cols*(cell+gap);
+  function drawGrid(x0,y0,edgeMode){
+    const g=el('g',{});
+    bmp.forEach((row,r)=>{
+      [...row].forEach((ch,c)=>{
+        let fill;
+        if(!edgeMode){
+          fill = mix('#000000','#ffffff', ch==='1'? 0.15:0.92);
+        } else {
+          // detect edge: neighbor differs
+          const left = c>0? row[c-1]:'0';
+          const right = c<cols-1? row[c+1]:'0';
+          const isEdge = ch !== left || ch !== right;
+          fill = (ch==='1' && isEdge) ? CORAL : mix('#000000','#ffffff',0.95);
+        }
+        g.appendChild(el('rect',{x:x0+c*(cell+gap),y:y0+r*(cell+gap),width:cell,height:cell,rx:5,fill}));
+      });
+    });
+    return g;
+  }
+  const y0=20;
+  svg.appendChild(drawGrid((W-gridW)/2, y0, false));
+  const capA=el('text',{x:W/2,y:y0+rows*(cell+gap)+26,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'19','fill':'#4A453F'});
+  capA.textContent='before: raw grayscale';
+  svg.appendChild(capA);
+
+  svg.appendChild(arrow(W/2-40, y0+rows*(cell+gap)+58, W/2+40, y0+rows*(cell+gap)+58));
+
+  const y1=y0+rows*(cell+gap)+84;
+  svg.appendChild(drawGrid((W-gridW)/2, y1, true));
+  const capB=el('text',{x:W/2,y:y1+rows*(cell+gap)+26,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'19','fill':CORAL,'font-weight':'700'});
+  capB.textContent='after: edges highlighted';
+  svg.appendChild(capB);
+  mount(id,svg);
+}
+
+/* ---------- Neuron diagram ---------- */
+function renderNeuron(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const inputs=[{y:150,v:'x₁'},{y:280,v:'x₂'},{y:410,v:'x₃'},{y:540,v:'x₄'}];
+  const sumX=350, sumY=345, actX=560, actR=42;
+  inputs.forEach((inp,i)=>{
+    svg.appendChild(el('circle',{cx:110,cy:inp.y,r:32,fill:PAPER,stroke:INK,'stroke-width':3}));
+    const t=el('text',{x:110,y:inp.y+8,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'21','font-weight':'700',fill:INK});
+    t.textContent=inp.v;
+    svg.appendChild(t);
+    const line=el('line',{x1:142,y1:inp.y,x2:sumX-40,y2:sumY,stroke: i%2? TEAL:CORAL,'stroke-width':2.5,opacity:'0.75'});
+    svg.appendChild(line);
+    const wLabel=el('text',{x:246,y:(inp.y+sumY)/2-8,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'16',fill:'#4A453F'});
+    wLabel.textContent='w'+(i+1);
+    svg.appendChild(wLabel);
+  });
+  svg.appendChild(el('circle',{cx:sumX,cy:sumY,r:46,fill:INK}));
+  const sigma=el('text',{x:sumX,y:sumY+13,'text-anchor':'middle','font-family':'Bricolage Grotesque, sans-serif','font-size':'38','font-weight':'700',fill:YELLOW});
+  sigma.textContent='Σ';
+  svg.appendChild(sigma);
+  svg.appendChild(arrow(sumX+46,sumY,actX-actR-8,sumY));
+  svg.appendChild(el('circle',{cx:actX,cy:sumY,r:actR,fill:'none',stroke:TEAL,'stroke-width':4}));
+  const act=el('text',{x:actX,y:sumY+8,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'17','font-weight':'700',fill:TEAL});
+  act.textContent='ReLU';
+  svg.appendChild(act);
+  svg.appendChild(arrow(actX+actR,sumY,actX+actR+56,sumY));
+  const outLabel=el('text',{x:actX+actR+70,y:sumY+8,'font-family':'Space Grotesk, sans-serif','font-size':'21',fill:'#4A453F'});
+  outLabel.textContent='output';
+  svg.appendChild(outLabel);
+  mount(id,svg);
+}
+
+/* ---------- Layers / network ---------- */
+function renderLayers(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  // input: represent 784 as a small pixel tile icon
+  const tileX=90, tileY=280, tileSize=140;
+  const bmp = DIGIT_BITMAPS[8];
+  const cell=tileSize/7;
+  bmp.forEach((row,r)=>[...row].forEach((ch,c)=>{
+    svg.appendChild(el('rect',{x:tileX+c*cell,y:tileY+r*cell,width:cell-1,height:cell-1, fill: ch==='1'? INK:'#00000012'}));
+  }));
+  const inLabel=el('text',{x:tileX+tileSize/2,y:tileY+tileSize+34,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'18',fill:'#4A453F'});
+  inLabel.textContent='784 pixels';
+  svg.appendChild(inLabel);
+
+  const hiddenX=400, hiddenYs=[]; const hCount=8;
+  for(let i=0;i<hCount;i++) hiddenYs.push(120 + i*(460/(hCount-1)));
+  hiddenYs.forEach(hy=>{
+    svg.appendChild(el('line',{x1:tileX+tileSize+10,y1:tileY+tileSize/2,x2:hiddenX-30,y2:hy,stroke:TEAL,'stroke-width':1,opacity:'0.3'}));
+  });
+  hiddenYs.forEach(hy=>{
+    svg.appendChild(el('circle',{cx:hiddenX,cy:hy,r:20,fill:PAPER,stroke:TEAL,'stroke-width':3}));
+  });
+  const hLabel=el('text',{x:hiddenX,y:610,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'18',fill:'#4A453F'});
+  hLabel.textContent='128 neurons';
+  svg.appendChild(hLabel);
+
+  const outX=680;
+  for(let i=0;i<10;i++){
+    const oy = 100 + i*(500/9);
+    hiddenYs.forEach(hy=>{
+      svg.appendChild(el('line',{x1:hiddenX+20,y1:hy,x2:outX-22,y2:oy,stroke:CORAL,'stroke-width':0.6,opacity:'0.07'}));
+    });
+  }
+  for(let i=0;i<10;i++){
+    const oy = 100 + i*(500/9);
+    svg.appendChild(el('circle',{cx:outX,cy:oy,r:22,fill: i===7? YELLOW:PAPER, stroke:CORAL,'stroke-width':3}));
+    const t=el('text',{x:outX,y:oy+7,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'18','font-weight':'700',fill:INK});
+    t.textContent=i;
+    svg.appendChild(t);
+  }
+  const oLabel=el('text',{x:outX,y:630,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'18',fill:'#4A453F'});
+  oLabel.textContent='10 digits';
+  svg.appendChild(oLabel);
+  mount(id,svg);
+}
+
+/* ---------- Activation graph ---------- */
+function renderActivation(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const ox=100, oy=560, ax=650, ay=110;
+  svg.appendChild(el('line',{x1:ox,y1:oy,x2:ax,y2:oy,stroke:INK,'stroke-width':3}));
+  svg.appendChild(el('line',{x1:ox,y1:oy,x2:ox,y2:ay,stroke:INK,'stroke-width':3}));
+  const xLabel=el('text',{x:ax+10,y:oy+8,'font-family':'JetBrains Mono, monospace','font-size':'20',fill:'#4A453F'}); xLabel.textContent='x'; svg.appendChild(xLabel);
+  const yLabel=el('text',{x:ox-14,y:ay-14,'font-family':'JetBrains Mono, monospace','font-size':'20',fill:'#4A453F','text-anchor':'end'}); yLabel.textContent='relu(x)'; svg.appendChild(yLabel);
+  // straight "without activation" dashed reference
+  svg.appendChild(el('line',{x1:ox,y1:oy-20,x2:ax-40,y2:ay+20,stroke:'#a8a196','stroke-width':2.5,'stroke-dasharray':'6 8'}));
+  const refLabel=el('text',{x:ax-70,y:ay+10,'font-family':'Space Grotesk, sans-serif','font-size':'17',fill:'#a8a196'}); refLabel.textContent='without activation'; svg.appendChild(refLabel);
+  // ReLU path: flat then rising
+  const midX=(ox+ax)/2;
+  svg.appendChild(el('path',{d:`M${ox},${oy} L${midX},${oy} L${ax-40},${ay+40}`,fill:'none',stroke:TEAL,'stroke-width':6,'stroke-linecap':'round'}));
+  const reluLabel=el('text',{x:midX+40,y:oy-50,'font-family':'Space Grotesk, sans-serif','font-size':'20','font-weight':'700',fill:TEAL}); reluLabel.textContent='ReLU'; svg.appendChild(reluLabel);
+  mount(id,svg);
+}
+
+/* ---------- Softmax / bar chart (reusable) ---------- */
+function renderBars(id, values, highlightIndex, labels){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const n=values.length;
+  const chartW=650, chartH=460, x0=(W-chartW)/2, y0=520;
+  const barW=chartW/n*0.62, gap=chartW/n;
+  svg.appendChild(el('line',{x1:x0-10,y1:y0,x2:x0+chartW+10,y2:y0,stroke:INK,'stroke-width':3}));
+  values.forEach((v,i)=>{
+    const h = v*chartH;
+    const x = x0 + i*gap + (gap-barW)/2;
+    const y = y0-h;
+    svg.appendChild(el('rect',{x,y,width:barW,height:h,rx:8,fill: i===highlightIndex? YELLOW: mix(TEAL,PAPER,0.35), stroke: i===highlightIndex? INK:'none', 'stroke-width':2.5}));
+    if(i===highlightIndex){
+      const pct=el('text',{x:x+barW/2,y:y-16,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'22','font-weight':'700',fill:INK});
+      pct.textContent=Math.round(v*100)+'%';
+      svg.appendChild(pct);
+    }
+    const lab=el('text',{x:x+barW/2,y:y0+30,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'19','font-weight': i===highlightIndex?'700':'400', fill: i===highlightIndex? INK:'#4A453F'});
+    lab.textContent = labels ? labels[i] : i;
+    svg.appendChild(lab);
+  });
+  mount(id,svg);
+}
+
+/* ---------- Loss comparison ---------- */
+function renderLoss(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const trueVals=[0,0,0,0,0,0,0,1,0,0];
+  const predVals=[0.02,0.01,0.03,0.02,0.05,0.02,0.02,0.71,0.07,0.05];
+  const n=10, chartW=650, chartH=130, x0=(W-chartW)/2;
+  const barW=chartW/n*0.6, gap=chartW/n;
+  // true row
+  const y0=190;
+  const trueLabel=el('text',{x:x0-16,y:y0-chartH-24,'font-family':'Space Grotesk, sans-serif','font-size':'20','font-weight':'700',fill:'#4A453F'}); trueLabel.textContent='true answer: 7'; svg.appendChild(trueLabel);
+  trueVals.forEach((v,i)=>{
+    const h=v*chartH; const x=x0+i*gap+(gap-barW)/2; const y=y0-h;
+    svg.appendChild(el('rect',{x,y,width:barW,height:Math.max(h,4),rx:6,fill: v>0? TEAL:'#00000012'}));
+  });
+  // predicted row
+  const y1=550;
+  const predLabel=el('text',{x:x0-16,y:y1-chartH-24,'font-family':'Space Grotesk, sans-serif','font-size':'20','font-weight':'700',fill:'#4A453F'}); predLabel.textContent='network guessed'; svg.appendChild(predLabel);
+  predVals.forEach((v,i)=>{
+    const h=v*chartH; const x=x0+i*gap+(gap-barW)/2; const y=y1-h;
+    svg.appendChild(el('rect',{x,y,width:barW,height:Math.max(h,4),rx:6,fill: i===7? CORAL: mix(CORAL,PAPER,0.6)}));
+    const lab=el('text',{x:x+barW/2,y:y1+28,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'17',fill:'#4A453F'});
+    lab.textContent=i; svg.appendChild(lab);
+  });
+  // gap arrow between the "7" bars
+  const gx = x0+7*gap+gap/2;
+  svg.appendChild(el('line',{x1:gx,y1:y0+10,x2:gx,y2:y1-chartH-10,stroke:INK,'stroke-width':2,'stroke-dasharray':'4 6'}));
+  const gapLabel=el('text',{x:gx+18,y:(y0+y1)/2,'font-family':'Space Grotesk, sans-serif','font-size':'19','font-weight':'700',fill:INK}); gapLabel.textContent='the gap = the loss'; svg.appendChild(gapLabel);
+  mount(id,svg);
+}
+
+/* ---------- Gradient descent bowl ---------- */
+function renderDescent(id){
+  const W=770,H=700; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const x0=90, x1=680, topY=140, botY=520;
+  const bowl = `M${x0},${topY+60} Q${(x0+x1)/2},${botY+120} ${x1},${topY+60}`;
+  svg.appendChild(el('path',{d:bowl,fill:'none',stroke:INK,'stroke-width':4}));
+  // steps down the curve
+  const steps=[[0.08,0.55],[0.22,0.78],[0.38,0.92],[0.5,0.98]];
+  function bowlY(t){ // approximate quadratic bowl
+    const cx=0.5;
+    return topY+60 + (botY+120-(topY+60)) * (1-Math.pow((t-cx)/cx,2)) * -1 * -1;
+  }
+  function pointAt(t){
+    const x = x0 + t*(x1-x0);
+    const cx=(x1-x0)/2;
+    const norm = (t-0.5)*2; // -1..1
+    const y = botY+60 - (1-norm*norm) * (botY-topY-40);
+    return [x,y];
+  }
+  let prev = pointAt(0.06);
+  svg.appendChild(el('circle',{cx:prev[0],cy:prev[1],r:14,fill:CORAL,stroke:INK,'stroke-width':3}));
+  [0.2,0.34,0.46,0.5].forEach((t,i)=>{
+    const pt=pointAt(t);
+    svg.appendChild(el('line',{x1:prev[0],y1:prev[1],x2:pt[0],y2:pt[1],stroke:YELLOW,'stroke-width':3,'stroke-dasharray':'5 7'}));
+    svg.appendChild(el('circle',{cx:pt[0],cy:pt[1],r: i===3?16:10,fill: i===3? TEAL:CORAL, stroke:INK,'stroke-width':3}));
+    prev=pt;
+  });
+  const label1=el('text',{x:x0,y:topY+20,'font-family':'Space Grotesk, sans-serif','font-size':'20','fill':'#4A453F'}); label1.textContent='high loss'; svg.appendChild(label1);
+  const label2=el('text',{x:x1-140,y:topY+20,'text-anchor':'start','font-family':'Space Grotesk, sans-serif','font-size':'20','fill':'#4A453F'}); label2.textContent='high loss'; svg.appendChild(label2);
+  const label3=el('text',{x:(x0+x1)/2,y:botY+90,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'22','font-weight':'700','fill':TEAL}); label3.textContent='low loss — best weights'; svg.appendChild(label3);
+  mount(id,svg);
+}
+
+/* ===========================================
+   SYNTAX HIGHLIGHTER — tiny, self-contained
+   =========================================== */
+function highlightPython(code){
+  const escaped = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const pattern = /(#[^\n]*)|('[^']*'|"[^"]*")|\b(def|class|for|in|return|import|if|else|elif|while|self|range)\b|\b(\d+\.?\d*)\b/g;
+  return escaped.replace(pattern, (match, comment, str, kw, num) => {
+    if(comment) return '<span class="tok-c">'+comment+'</span>';
+    if(str) return '<span class="tok-s">'+str+'</span>';
+    if(kw) return '<span class="tok-k">'+kw+'</span>';
+    if(num) return '<span class="tok-n">'+num+'</span>';
+    return match;
+  });
+}
+document.querySelectorAll('.code-card code').forEach(node=>{
+  node.innerHTML = highlightPython(node.textContent);
+});
+
+/* ===========================================
+   RENDER ALL DIAGRAMS
+   =========================================== */
+renderAperture('dg-title');
+renderStepFlow('dg-roadmap', [
+  {icon:'camera',label:'Pixels',color:CORAL},
+  {icon:'kernel',label:'Filters',color:YELLOW},
+  {icon:'neuron',label:'Neurons',color:TEAL},
+  {icon:'loss',label:'Training',color:SKY},
+  {icon:'flag',label:'Prediction',color:CORAL},
+]);
+renderCVIntro('dg-cvintro');
+renderGrayscale('dg-grayscale');
+renderRGB('dg-rgb');
+renderConv('dg-conv');
+renderEdges('dg-edges');
+renderNeuron('dg-neuron');
+renderLayers('dg-layers');
+renderActivation('dg-activation');
+renderBars('dg-softmax', [0.02,0.01,0.03,0.02,0.05,0.02,0.02,0.71,0.07,0.05], 7);
+renderLoss('dg-loss');
+renderDescent('dg-descent');
+renderAperture('dg-handoff');
+
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   =========================================== */
+class SlidePresentation{
+  constructor(){
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.currentSlide = 0;
+    this.stage = document.getElementById('deckStage');
+    this.dotsWrap = document.getElementById('dotsWrap');
+    this.progressText = document.getElementById('progressText');
+    this.buildDots();
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupWheelNav();
+    document.getElementById('prevBtn').addEventListener('click', ()=>this.showSlide(this.currentSlide-1));
+    document.getElementById('nextBtn').addEventListener('click', ()=>this.showSlide(this.currentSlide+1));
+    this.showSlide(0);
+  }
+  buildDots(){
+    this.dots = this.slides.map((s,i)=>{
+      const b=document.createElement('button');
+      b.setAttribute('aria-label','Go to slide '+(i+1));
+      b.addEventListener('click',()=>this.showSlide(i));
+      this.dotsWrap.appendChild(b);
+      return b;
+    });
+  }
+  setupStageScale(){
+    const scale=()=>{
+      const factor=Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x=(window.innerWidth-1920*factor)/2, y=(window.innerHeight-1080*factor)/2;
+      this.stage.style.transform=`translate(${x}px,${y}px) scale(${factor})`;
+    };
+    scale(); window.addEventListener('resize',scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown',(e)=>{
+      if(e.target.getAttribute && e.target.getAttribute('contenteditable')==='true') return;
+      if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ e.preventDefault(); this.showSlide(this.currentSlide+1); }
+      else if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); this.showSlide(this.currentSlide-1); }
+      else if(e.key==='Home'){ this.showSlide(0); }
+      else if(e.key==='End'){ this.showSlide(this.slides.length-1); }
+    });
+  }
+  setupTouchNav(){
+    let startX=0;
+    this.stage.addEventListener('touchstart',(e)=>{ startX=e.touches[0].clientX; },{passive:true});
+    this.stage.addEventListener('touchend',(e)=>{
+      const dx=e.changedTouches[0].clientX-startX;
+      if(Math.abs(dx)>60){ dx<0? this.showSlide(this.currentSlide+1): this.showSlide(this.currentSlide-1); }
+    },{passive:true});
+  }
+  setupWheelNav(){
+    let locked=false;
+    window.addEventListener('wheel',(e)=>{
+      if(locked) return;
+      if(Math.abs(e.deltaY)<24) return;
+      locked=true;
+      e.deltaY>0? this.showSlide(this.currentSlide+1): this.showSlide(this.currentSlide-1);
+      setTimeout(()=>locked=false, 650);
+    },{passive:true});
+  }
+  showSlide(index){
+    this.currentSlide = Math.max(0, Math.min(index, this.slides.length-1));
+    this.slides.forEach((slide,i)=>{
+      slide.classList.toggle('active', i===this.currentSlide);
+      slide.classList.toggle('visible', i===this.currentSlide);
+    });
+    this.dots.forEach((d,i)=>d.classList.toggle('active', i===this.currentSlide));
+    this.progressText.textContent = (this.currentSlide+1)+' / '+this.slides.length;
+  }
+}
+const presentation = new SlidePresentation();
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+const editor = {
+  isActive:false,
+  storageKey:'cv-workshop-deck-v1',
+  toggleEditMode(){
+    this.isActive = !this.isActive;
+    document.querySelectorAll('.editable').forEach(el=>el.setAttribute('contenteditable', this.isActive?'true':'false'));
+    document.getElementById('editToggle').classList.toggle('active', this.isActive);
+    document.getElementById('exportToggle').classList.toggle('show', this.isActive);
+    if(!this.isActive) this.save();
+  },
+  save(){
+    const data={};
+    document.querySelectorAll('.editable').forEach((el,i)=>{ data[i]=el.innerHTML; });
+    try{ localStorage.setItem(this.storageKey, JSON.stringify(data)); }catch(e){}
+  },
+  restore(){
+    try{
+      const raw=localStorage.getItem(this.storageKey);
+      if(!raw) return;
+      const data=JSON.parse(raw);
+      document.querySelectorAll('.editable').forEach((el,i)=>{ if(data[i]!==undefined) el.innerHTML=data[i]; });
+    }catch(e){}
+  }
+};
+editor.restore();
+
+const hotzone=document.getElementById('editHotzone');
+const editToggle=document.getElementById('editToggle');
+let hideTimeout=null;
+hotzone.addEventListener('mouseenter',()=>{ clearTimeout(hideTimeout); editToggle.classList.add('show'); });
+hotzone.addEventListener('mouseleave',()=>{ hideTimeout=setTimeout(()=>{ if(!editor.isActive) editToggle.classList.remove('show'); },400); });
+editToggle.addEventListener('mouseenter',()=>clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave',()=>{ hideTimeout=setTimeout(()=>{ if(!editor.isActive) editToggle.classList.remove('show'); },400); });
+hotzone.addEventListener('click',()=>editor.toggleEditMode());
+editToggle.addEventListener('click',()=>editor.toggleEditMode());
+document.addEventListener('keydown',(e)=>{
+  if((e.key==='e'||e.key==='E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable')==='true')){
+    editor.toggleEditMode();
+  }
+});
+document.getElementById('exportToggle').addEventListener('click',()=>{
+  editor.save();
+  const blob=new Blob(['<!DOCTYPE html>\n'+document.documentElement.outerHTML],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='cv-workshop.html'; a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
