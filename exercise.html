@@ -185,12 +185,6 @@ img,video,canvas,svg{max-width:100%;max-height:100%;}
   text-decoration:none; display:flex; align-items:center; gap:8px;
 }
 .back-link:hover{color:var(--coral);}
-.colab-link{
-  position:absolute; top:120px; left:150px; z-index:3;
-  font-family:var(--font-mono); font-size:15px; font-weight:600; color:var(--teal);
-  text-decoration:none; display:flex; align-items:center; gap:8px;
-}
-.colab-link:hover{color:var(--coral);}
 </style>
 </head>
 <body>
@@ -207,7 +201,7 @@ img,video,canvas,svg{max-width:100%;max-height:100%;}
     <div class="headline reveal r1" style="width:1620px;">Our Exercise: Recognize <span class="accent">Handwritten Digits</span></div>
     <div class="oneliner reveal r2" style="width:1300px; top:400px;"><b>MNIST</b> is 70,000 handwritten digits, each a 28&times;28 grayscale image labeled 0 through 9. It's the classic first dataset for computer vision.</div>
     <div class="diagram-stage" style="left:150px; right:auto; top:520px; width:1620px; height:420px;" id="dg-dataset"></div>
-    <a href="https://colab.research.google.com/github/thtahamid/cv_workshop/blob/main/mnist_net.ipynb" target="_blank" rel="noopener" class="chip c2 reveal r3" style="position:absolute; left:150px; top:840px; font-size:24px; padding:20px 40px; text-decoration:none; display:inline-block;">Open notebook in Colab &#8599;</a>
+    <a href="https://colab.research.google.com/github/thtahamid/cv_workshop/blob/main/mnist_net.ipynb" target="_blank" rel="noopener" class="chip c2 reveal r3" style="position:absolute; z-index:4; left:150px; top:840px; font-size:24px; padding:20px 40px; text-decoration:none; display:inline-block;">Open notebook in Colab &#8599;</a>
   </div>
 </section>
 
@@ -217,7 +211,6 @@ img,video,canvas,svg{max-width:100%;max-height:100%;}
 <section class="slide" data-title="Build">
   <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#3E8FD6;--tint-b:#FF6B4A;">
     <a href="index.html" class="back-link">&#8592; back to the deck</a>
-    <a href="https://colab.research.google.com/github/thtahamid/cv_workshop/blob/main/mnist_net.ipynb" target="_blank" rel="noopener" class="colab-link">Open notebook in Colab &#8599;</a>
     <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
     <div class="headline reveal r1">Let's Build It: <span class="accent-teal">A Tiny Net</span> From Scratch</div>
     <div class="oneliner reveal r2">Two layers of weights, two activation steps &mdash; that's the whole brain.</div>
@@ -241,7 +234,6 @@ img,video,canvas,svg{max-width:100%;max-height:100%;}
 <section class="slide" data-title="Training loop">
   <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#FF6B4A;--tint-b:#FFC145;">
     <a href="index.html" class="back-link">&#8592; back to the deck</a>
-    <a href="https://colab.research.google.com/github/thtahamid/cv_workshop/blob/main/mnist_net.ipynb" target="_blank" rel="noopener" class="colab-link">Open notebook in Colab &#8599;</a>
     <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
     <div class="headline reveal r1">Train By Repeating: <span class="accent">Predict, Measure, Adjust</span></div>
     <div class="oneliner reveal r2">Thousands of tiny corrections later, the loss curve drops and the network gets sharper.</div>
@@ -262,7 +254,6 @@ img,video,canvas,svg{max-width:100%;max-height:100%;}
 <section class="slide" data-title="Live test">
   <div class="paper-bg" style="position:absolute;inset:0;--tint-a:#0E8C82;--tint-b:#3E8FD6;">
     <a href="index.html" class="back-link">&#8592; back to the deck</a>
-    <a href="https://colab.research.google.com/github/thtahamid/cv_workshop/blob/main/mnist_net.ipynb" target="_blank" rel="noopener" class="colab-link">Open notebook in Colab &#8599;</a>
     <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
     <div class="headline reveal r1">Show It a New Digit &mdash; <span class="accent-teal">What Does It See?</span></div>
     <div class="oneliner reveal r2">The trained network turns a fresh drawing into ten confidence scores, then picks the highest one.</div>
