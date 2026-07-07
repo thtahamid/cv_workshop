@@ -157,15 +157,31 @@ img,video,canvas,svg{max-width:100%;max-height:100%;}
 .chips{position:absolute; left:150px; bottom:118px; display:flex; gap:22px; z-index:2;}
 .chip{font-family:var(--font-body); font-weight:600; font-size:20px; color:var(--ink); background:#fff; border:2.5px solid var(--ink); border-radius:100px; padding:14px 28px; box-shadow:5px 5px 0 var(--ink);}
 .chip.c1{background:var(--coral); color:#fff;} .chip.c2{background:var(--teal); color:#fff;} .chip.c3{background:var(--yellow); color:var(--ink);}
+.aperture-wrap{position:absolute; right:150px; top:50%; transform:translateY(-50%); width:480px; height:480px; z-index:2;}
+
+/* ---- Cover slide: centered title + institution block ---- */
+.cover-center{
+  position:absolute; left:150px; top:0; width:1100px; height:1080px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; z-index:2;
+}
+.cover-title{
+  font-family:var(--font-display); font-weight:800; font-size:92px; line-height:1.05; letter-spacing:-1px; color:var(--ink);
+}
+.cover-title .accent{color:var(--coral);}
+.cover-date{
+  margin-top:18px; font-family:var(--font-mono); font-size:22px; color:var(--ink-soft); letter-spacing:1px;
+}
+.cover-univ{display:flex; align-items:center; gap:14px; margin-top:56px;}
+.univ-icon{width:46px; height:46px; flex-shrink:0;}
+.cover-univ span{font-family:var(--font-display); font-weight:800; font-size:36px; color:var(--teal); letter-spacing:-0.5px;}
+.cover-school{margin-top:10px; font-family:var(--font-body); font-size:22px; color:var(--ink-soft); max-width:820px;}
 .credits{
-  position:absolute; left:150px; bottom:118px; z-index:2;
-  font-family:var(--font-body); font-size:24px; color:var(--ink-soft); line-height:1.7;
+  position:absolute; left:150px; width:1100px; bottom:110px; z-index:2;
+  font-family:var(--font-body); font-size:22px; color:var(--ink-soft); line-height:1.8;
+  text-align:center;
 }
 .credits b{color:var(--ink); font-weight:700;}
-.credits .institution{font-weight:700; color:var(--ink);}
-.credits .institution.school{font-weight:500; color:var(--ink-soft); font-size:21px;}
-.credits .names{margin-top:16px;}
-.aperture-wrap{position:absolute; right:150px; top:50%; transform:translateY(-50%); width:480px; height:480px; z-index:2;}
 
 /* ===========================================
    DECK CONTROLS (outside slide design system)
@@ -208,14 +224,23 @@ img,video,canvas,svg{max-width:100%;max-height:100%;}
     <div class="tape editable" contenteditable="false">Computer Vision Workshop</div>
     <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
 
-    <div class="title-block">
-      <h1 class="reveal r1 editable" contenteditable="false">Summer Camp <span class="accent">2026</span></h1>
-      <p class="reveal r2 editable" contenteditable="false">July 7, 2026</p>
+    <div class="cover-center">
+      <h1 class="reveal r1 editable cover-title" contenteditable="false">Summer Camp <span class="accent">2026</span></h1>
+      <p class="reveal r1 editable cover-date" contenteditable="false">July 7, 2026</p>
+
+      <div class="cover-univ reveal r2">
+        <svg class="univ-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <path d="M24 6 L46 16 L24 26 L2 16 Z" fill="var(--teal)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M12 20 L12 30 C12 34 17.5 38 24 38 C30.5 38 36 34 36 30 L36 20" stroke="var(--ink)" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <line x1="42" y1="17" x2="42" y2="31" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="42" cy="33" r="2.6" fill="var(--coral)"/>
+        </svg>
+        <span class="editable" contenteditable="false">Canadian University Dubai</span>
+      </div>
+      <div class="cover-school editable reveal r2" contenteditable="false">School of Engineering, Applied Science and Technology (SEAST)</div>
     </div>
 
     <div class="credits reveal r3">
-      <div class="editable institution" contenteditable="false">Canadian University Dubai</div>
-      <div class="editable institution school" contenteditable="false">School of Engineering, Applied Science and Technology (SEAST)</div>
       <div class="editable names" contenteditable="false">Prepared by: <b>Tahamid Hossain</b></div>
       <div class="editable" contenteditable="false">Supervisor: <b>Dr. Haythem El-Messiry</b></div>
     </div>
