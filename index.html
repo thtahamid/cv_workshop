@@ -165,6 +165,7 @@ img,video,canvas,svg{max-width:100%;max-height:100%;}
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   text-align:center; z-index:2;
 }
+.title-icon{width:96px; height:96px; margin-bottom:8px;}
 .cover-title{
   font-family:var(--font-display); font-weight:800; font-size:92px; line-height:1.05; letter-spacing:-1px; color:var(--ink);
 }
@@ -225,7 +226,15 @@ img,video,canvas,svg{max-width:100%;max-height:100%;}
     <img class="brand-logo" src="cud-logo-jpeg.jpeg" alt="CUD logo">
 
     <div class="cover-center">
-      <h1 class="reveal r1 editable cover-title" contenteditable="false">Summer Camp <span class="accent">2026</span></h1>
+      <svg class="title-icon reveal r1" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M32 6 C41 15 45 28 40 41 L24 41 C19 28 23 15 32 6 Z" fill="var(--coral)" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle cx="32" cy="23" r="5.5" fill="var(--sky)" stroke="var(--ink)" stroke-width="2"/>
+        <path d="M24 33 L15 43 L23 40 Z" fill="var(--teal)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M40 33 L49 43 L41 40 Z" fill="var(--teal)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M27 41 L23 58 L29 46 Z" fill="var(--yellow)" stroke="var(--ink)" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M37 41 L41 58 L35 46 Z" fill="var(--yellow)" stroke="var(--ink)" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+      <h1 class="reveal r1 editable cover-title" contenteditable="false">Future Makers Summer Camp <span class="accent">2026</span></h1>
       <p class="reveal r1 editable cover-date" contenteditable="false">July 7, 2026</p>
 
       <div class="cover-univ reveal r2">
