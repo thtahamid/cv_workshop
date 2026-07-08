@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Dive Guide - Computer Vision Workshop</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23FBF3E4'/%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%23221F26' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='14' fill='%230E8C82'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Space+Grotesk:wght@400;500;600;700&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBF3E4;
+  --paper-light:#FFFDF8;
+  --ink:#221F26;
+  --ink-soft:#4A453F;
+  --line:#E4D6B8;
+  --coral:#FF6B4A;
+  --teal:#0E8C82;
+  --yellow:#FFC145;
+  --sky:#3E8FD6;
+
+  --code-bg:#221F26;
+  --code-text:#F3ECDD;
+  --code-kw:#FF8A68;
+  --code-str:#FFD37A;
+  --code-num:#7EC2F3;
+  --code-com:#948C7C;
+
+  --font-display:'Bricolage Grotesque',sans-serif;
+  --font-body:'Space Grotesk',sans-serif;
+  --font-hand:'Caveat',cursive;
+  --font-mono:'JetBrains Mono',monospace;
+
+  --ease:cubic-bezier(0.16,1,0.3,1);
+  --sidebar-w:340px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;background:var(--paper);font-family:var(--font-body);color:var(--ink);}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+
+/* ===========================================
+   LAYOUT
+   =========================================== */
+.app{display:flex; height:100vh; overflow:hidden;}
+
+.sidebar{
+  width:var(--sidebar-w); flex-shrink:0; height:100%; overflow-y:auto;
+  background:var(--ink); color:var(--paper-light);
+  padding:36px 0 28px;
+  border-right:2px solid var(--ink);
+}
+.sidebar-head{padding:0 28px 26px; border-bottom:1px solid rgba(255,255,255,0.12); margin-bottom:18px;}
+.sidebar-kicker{font-family:var(--font-hand); font-size:22px; color:var(--yellow); transform:rotate(-2deg); display:inline-block;}
+.sidebar-title{font-family:var(--font-display); font-weight:800; font-size:28px; line-height:1.15; margin-top:8px;}
+.sidebar-title .accent{color:var(--coral);}
+.sidebar-sub{font-size:15px; color:#C9C2B4; margin-top:10px; line-height:1.5;}
+
+.toc-group{padding:0 16px; margin-bottom:6px;}
+.toc-group-label{
+  font-family:var(--font-mono); font-size:12px; letter-spacing:1.5px; text-transform:uppercase;
+  color:#8B8377; padding:18px 12px 8px;
+}
+.toc-item{
+  display:flex; align-items:baseline; gap:12px; width:100%; text-align:left;
+  background:none; border:none; color:#D8D2C4; font-family:var(--font-body); font-size:16px; font-weight:500;
+  padding:10px 12px; border-radius:10px; cursor:pointer; transition:background .18s, color .18s;
+}
+.toc-item:hover{background:rgba(255,255,255,0.06); color:#fff;}
+.toc-item.active{background:var(--coral); color:#fff; font-weight:600;}
+.toc-num{font-family:var(--font-mono); font-size:13px; color:#8B8377; min-width:22px;}
+.toc-item.active .toc-num{color:rgba(255,255,255,0.75);}
+.toc-item.visited:not(.active)::after{content:'✓'; margin-left:auto; color:var(--teal); font-size:13px;}
+
+.sidebar-foot{padding:22px 28px 0; margin-top:14px; border-top:1px solid rgba(255,255,255,0.12); display:flex; flex-direction:column; gap:10px;}
+.sidebar-foot a{color:#D8D2C4; font-size:14px; text-decoration:none; font-family:var(--font-mono); transition:color .18s;}
+.sidebar-foot a:hover{color:var(--yellow);}
+
+.guide-main{flex:1; height:100%; overflow-y:auto; scroll-behavior:smooth;}
+.concept{display:none; padding:64px 64px 40px; max-width:1180px; margin:0 auto;}
+.concept.active{display:block;}
+
+.crumb{font-family:var(--font-mono); font-size:14px; color:var(--ink-soft); letter-spacing:0.5px; margin-bottom:18px;}
+.crumb b{color:var(--coral);}
+
+.c-title{font-family:var(--font-display); font-weight:800; font-size:52px; line-height:1.08; letter-spacing:-1px; margin-bottom:20px;}
+.c-title .accent{color:var(--coral);} .c-title .accent-teal{color:var(--teal);}
+.c-tagline{font-size:22px; line-height:1.6; color:var(--ink-soft); max-width:860px; margin-bottom:40px;}
+.c-tagline b{color:var(--teal); font-weight:600;} .c-tagline b.c{color:var(--coral);}
+
+.diagram-card{
+  background:var(--paper-light); border:2.5px solid var(--ink); border-radius:20px;
+  box-shadow:7px 7px 0 var(--ink); padding:28px; margin:0 0 44px;
+}
+.diagram-card svg{width:100%; height:auto; display:block; max-height:440px;}
+.diagram-cap{font-family:var(--font-mono); font-size:14px; color:var(--ink-soft); text-align:center; margin-top:14px; letter-spacing:0.4px;}
+
+.body-copy{font-size:19px; line-height:1.75; color:var(--ink); max-width:840px;}
+.body-copy p{margin-bottom:20px;}
+.body-copy b{color:var(--ink); font-weight:700;}
+.body-copy b.teal{color:var(--teal);} .body-copy b.coral{color:var(--coral);}
+.body-copy code{font-family:var(--font-mono); font-size:0.86em; background:#EDE2C8; padding:2px 7px; border-radius:5px;}
+
+.h2{font-family:var(--font-display); font-weight:800; font-size:29px; margin:46px 0 18px; letter-spacing:-0.5px;}
+.h2 .num{font-family:var(--font-mono); font-size:17px; color:var(--coral); margin-right:12px; font-weight:700;}
+
+.code-card{
+  background:var(--code-bg); border-radius:16px; padding:0 0 24px;
+  box-shadow:0 14px 32px rgba(34,31,38,0.22), 0 0 0 2px var(--ink);
+  max-width:840px; margin:22px 0 30px;
+}
+.code-card-head{display:flex; align-items:center; gap:10px; padding:15px 22px 11px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:16px;}
+.code-card-head .dot{width:11px;height:11px;border-radius:50%;display:inline-block;}
+.dot.d1{background:var(--coral);} .dot.d2{background:var(--yellow);} .dot.d3{background:var(--teal);}
+.filename{margin-left:8px; font-family:var(--font-mono); font-size:14px; color:var(--code-com);}
+.code-card pre{margin:0; padding:0 24px; overflow-x:auto;}
+.code-card code{font-family:var(--font-mono); font-size:17px; line-height:1.65; color:var(--code-text); white-space:pre;}
+.tok-k{color:var(--code-kw); font-weight:600;} .tok-s{color:var(--code-str);} .tok-n{color:var(--code-num);} .tok-c{color:var(--code-com); font-style:italic;}
+
+.callout{
+  border-radius:16px; padding:22px 26px; margin:26px 0; max-width:840px;
+  border:2px solid var(--ink); position:relative;
+}
+.callout-label{font-family:var(--font-hand); font-size:23px; display:flex; align-items:center; gap:10px; margin-bottom:8px; font-weight:700;}
+.callout p{font-size:17px; line-height:1.65; color:var(--ink-soft);}
+.callout p b{color:var(--ink);}
+.callout.tip{background:rgba(255,193,69,0.24); border-color:#8a6d1f;}
+.callout.tip .callout-label{color:#7a5a1a;}
+.callout.faq{background:rgba(62,143,214,0.14); border-color:var(--sky);}
+.callout.faq .callout-label{color:#1f5a94;}
+.callout.honest{background:rgba(255,107,74,0.12); border-color:var(--coral);}
+.callout.honest .callout-label{color:#c8442a;}
+
+.footer-nav{display:flex; justify-content:space-between; align-items:center; margin-top:56px; padding-top:28px; border-top:2px dashed var(--line); gap:20px;}
+.nav-link{
+  font-family:var(--font-body); font-weight:600; font-size:17px; color:var(--ink);
+  background:#fff; border:2.5px solid var(--ink); border-radius:100px; padding:14px 26px;
+  cursor:pointer; box-shadow:4px 4px 0 var(--ink); transition:transform .15s, box-shadow .15s;
+  text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+}
+.nav-link:hover{transform:translate(-2px,-2px); box-shadow:6px 6px 0 var(--ink);}
+.nav-link:active{transform:translate(0,0); box-shadow:2px 2px 0 var(--ink);}
+.nav-link.disabled{opacity:0.35; pointer-events:none;}
+.nav-link span.sub{font-size:12px; font-weight:400; color:var(--ink-soft); display:block;}
+
+.chip-row{display:flex; gap:14px; flex-wrap:wrap; margin:0 0 40px;}
+.chip{font-family:var(--font-mono); font-weight:600; font-size:14px; color:var(--ink); background:#fff; border:2px solid var(--ink); border-radius:100px; padding:9px 18px; box-shadow:3px 3px 0 var(--ink);}
+.chip.c1{background:var(--coral); color:#fff;} .chip.c2{background:var(--teal); color:#fff;} .chip.c3{background:var(--yellow); color:var(--ink);} .chip.c4{background:var(--sky); color:#fff;}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+.pulse-dot{filter:drop-shadow(0 0 3px rgba(255,107,74,0.6));}
+@keyframes rgbSeparate{
+  0%,100%{transform:translate(0,0);}
+  50%{transform:var(--sep, translate(0,0));}
+}
+.rgb-r{animation:rgbSeparate 3.6s var(--ease) infinite; --sep:translate(-26px,20px);}
+.rgb-g{animation:rgbSeparate 3.6s var(--ease) infinite; --sep:translate(0,-30px);}
+.rgb-b{animation:rgbSeparate 3.6s var(--ease) infinite; --sep:translate(26px,20px);}
+
+@keyframes arrowPulse{0%,100%{opacity:0.35;} 50%{opacity:1;}}
+.pulse-arrow{animation:arrowPulse 1.8s ease-in-out infinite;}
+
+@keyframes edgeFlicker{0%,100%{opacity:1;} 50%{opacity:0.35;}}
+.edge-flicker{animation:edgeFlicker 1.6s ease-in-out infinite;}
+
+.grow-bar{transform-origin:bottom; transform:scaleY(0); transition:transform .9s var(--ease);}
+.concept.active .grow-bar{transform:scaleY(1);}
+.grow-bar.gb1{transition-delay:.03s;} .grow-bar.gb2{transition-delay:.06s;} .grow-bar.gb3{transition-delay:.09s;}
+.grow-bar.gb4{transition-delay:.12s;} .grow-bar.gb5{transition-delay:.15s;} .grow-bar.gb6{transition-delay:.18s;}
+.grow-bar.gb7{transition-delay:.21s;} .grow-bar.gb8{transition-delay:.24s;} .grow-bar.gb9{transition-delay:.27s;}
+.grow-bar.gb10{transition-delay:.3s;}
+
+@keyframes gapBlink{0%,100%{opacity:0.3;} 50%{opacity:1;}}
+.gap-blink{animation:gapBlink 1.5s ease-in-out infinite;}
+
+@keyframes reluDraw{0%{stroke-dashoffset:900;} 65%{stroke-dashoffset:0;} 100%{stroke-dashoffset:0;}}
+.relu-draw{stroke-dasharray:900; animation:reluDraw 3.2s var(--ease) infinite;}
+
+.mobile-warn{display:none;}
+@media (max-width:880px){
+  .app{flex-direction:column; height:auto; overflow:visible;}
+  .sidebar{width:100%; height:auto; max-height:280px;}
+  .guide-main{height:auto; overflow:visible;}
+  .concept{padding:40px 24px;}
+  .c-title{font-size:36px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <span class="sidebar-kicker">Go deeper on every slide</span>
+      <div class="sidebar-title">Deep <span class="accent">Dive</span></div>
+      <div class="sidebar-sub">A deep-dive companion to the slide deck - one section per concept, in the exact order they appear in the deck.</div>
+    </div>
+
+    <nav class="toc" id="tocNav">
+      <div class="toc-group">
+        <div class="toc-group-label">Getting oriented</div>
+        <button class="toc-item" data-target="c0"><span class="toc-num">00</span>Welcome &amp; roadmap</button>
+        <button class="toc-item" data-target="c1"><span class="toc-num">01</span>What is computer vision?</button>
+      </div>
+      <div class="toc-group">
+        <div class="toc-group-label">Pixels &amp; color</div>
+        <button class="toc-item" data-target="c2"><span class="toc-num">02</span>Pixels are just numbers</button>
+        <button class="toc-item" data-target="c3"><span class="toc-num">03</span>RGB - three stacked grids</button>
+      </div>
+      <div class="toc-group">
+        <div class="toc-group-label">Filters</div>
+        <button class="toc-item" data-target="c4"><span class="toc-num">04</span>Convolution</button>
+        <button class="toc-item" data-target="c5"><span class="toc-num">05</span>Edge detection</button>
+      </div>
+      <div class="toc-group">
+        <div class="toc-group-label">Neurons</div>
+        <button class="toc-item" data-target="c6"><span class="toc-num">06</span>The neuron</button>
+        <button class="toc-item" data-target="c7"><span class="toc-num">07</span>Layers &amp; the network</button>
+      </div>
+      <div class="toc-group">
+        <div class="toc-group-label">Nonlinearity</div>
+        <button class="toc-item" data-target="c8"><span class="toc-num">08</span>Activation - ReLU</button>
+        <button class="toc-item" data-target="c9"><span class="toc-num">09</span>Softmax</button>
+      </div>
+      <div class="toc-group">
+        <div class="toc-group-label">Training</div>
+        <button class="toc-item" data-target="c10"><span class="toc-num">10</span>Loss</button>
+        <button class="toc-item" data-target="c11"><span class="toc-num">11</span>Gradient descent</button>
+      </div>
+      <div class="toc-group">
+        <div class="toc-group-label">Wrap-up</div>
+        <button class="toc-item" data-target="c12"><span class="toc-num">12</span>Putting it together</button>
+      </div>
+    </nav>
+
+    <div class="sidebar-foot">
+      <a href="index.html">&larr; Open the slide deck</a>
+      <a href="exercise.html">Open the exercise deck &rarr;</a>
+      <a href="mnist_net.ipynb">View mnist_net.ipynb</a>
+    </div>
+  </aside>
+
+  <main class="guide-main" id="guideMain">
+
+    <!-- ============================================================
+         00 - WELCOME
+         ============================================================ -->
+    <section class="concept active" id="c0">
+      <div class="crumb">Getting oriented &middot; <b>0 of 12</b></div>
+      <h1 class="c-title">How to Use <span class="accent">This Guide</span></h1>
+      <p class="c-tagline">This isn't the slide deck - it's what to read to actually <b>understand</b> each idea, not just recognize it. Every section here matches one slide, but goes several layers deeper: the full mechanics, an analogy that makes it concrete, and a question you might find yourself asking.</p>
+
+      <div class="chip-row">
+        <span class="chip c1">12 concepts</span>
+        <span class="chip c2">Mirrors the slide order</span>
+        <span class="chip c3">Analogies throughout</span>
+        <span class="chip c4">Maps to mnist_net.ipynb</span>
+      </div>
+
+      <div class="diagram-card">
+        <div id="dg-roadmap"></div>
+        <div class="diagram-cap">the five-stage arc of the whole workshop - every section below sits under one of these five pillars</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>What this guide gives you that the slides don't</div>
+      <div class="body-copy">
+        <p>The slides are built for a fast-moving workshop: short headlines, one idea per screen, a diagram, a snippet of code. That's the right call for a live session - but it means a lot of the "why" is compressed or implicit. This guide unpacks it. For each concept you'll get the intuition, the actual math, a note on <b>why the workshop simplifies it the way it does</b>, an analogy that makes it click, and at least one question you might find yourself asking, with an answer ready to go.</p>
+        <p>Read it once, straight through, to build the full picture. Then come back to any individual section whenever a concept from the slide deck needs a refresher.</p>
+      </div>
+
+      <div class="h2"><span class="num">02</span>The one honest simplification to know up front</div>
+      <div class="callout honest">
+        <div class="callout-label">⚠ Worth knowing up front</div>
+        <p>Slides 06&ndash;07 cover <b>convolution</b> and <b>edge detection</b> because they're the most intuitive, visual way to explain "a filter looks for a pattern." But the hands-on exercise (<code>mnist_net.ipynb</code>) does <b>not</b> build a convolutional network - it builds a plain fully-connected network (<code>SimpleNet</code>: 784 &rarr; 128 &rarr; 10) because that's the simplest model that still genuinely learns and is small enough to hand-derive and hand-code in a two-hour workshop. Convolution is taught as a concept that <i>motivates</i> real computer vision, not as code you'll actually type. Keep that in mind heading into Section 04, so it's not a surprise later that the network you build doesn't have any kernels sliding around in it. Section <a href="#" data-jump="c4" style="color:var(--coral);">04 &middot; Convolution</a> has the full note.</p>
+      </div>
+
+      <div class="footer-nav">
+        <span class="nav-link disabled">&larr; Start</span>
+        <a href="#" class="nav-link" data-jump="c1">What is computer vision? <span style="font-size:16px;">&rarr;</span></a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         01 - WHAT IS COMPUTER VISION
+         ============================================================ -->
+    <section class="concept" id="c1">
+      <div class="crumb">Chapter 01 &middot; The big idea &middot; <b>1 of 12</b></div>
+      <h1 class="c-title">What Is <span class="accent-teal">Computer Vision?</span></h1>
+      <p class="c-tagline">The field that lets software turn raw pixels into meaning: spotting faces, reading street signs, recognizing a handwritten <b class="c">7</b>.</p>
+
+      <div class="diagram-card">
+        <div id="dg-cvintro"></div>
+        <div class="diagram-cap">camera &rarr; pixels &rarr; math &rarr; a label a human understands</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>A camera doesn't capture "a dog" or "a stop sign." It captures light intensities at a grid of sensor points - nothing more. Computer vision is the discipline of writing a function that takes that grid of numbers as input and produces something a human cares about as output: a label, a box around an object, a count, a pixel-by-pixel map of "which part of this image is sky."</p>
+        <p>Every technique in this workshop - and in modern computer vision generally - is really just different ways of designing and training that function, which the CV intro slide calls <code>f(x)</code>. Today you'll build the simplest useful version of it: a function that looks at a 28&times;28 grid of numbers and outputs which digit, 0 through 9, it most likely represents.</p>
+      </div>
+
+      <div class="h2"><span class="num">02</span>Where this sits relative to "AI" and "machine learning"</div>
+      <div class="body-copy">
+        <p><b>Artificial intelligence</b> is the broad goal (software that behaves intelligently). <b>Machine learning</b> is the dominant modern approach to it (don't hand-write the rules - learn them from examples). <b>Computer vision</b> is machine learning applied specifically to visual data. Everything in this workshop is a computer vision problem solved with machine learning: nobody hand-wrote "if there's a loop at the top and a loop at the bottom, it's an 8" - the network discovers patterns like that on its own from thousands of examples, which is exactly what Sections 10&ndash;11 (Loss and Gradient Descent) explain the mechanism of.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Think about all the ways your phone already "sees": face unlock, photo search ("show me pictures of my dog"), a filter that tracks your face in real time, a car backup camera drawing guide lines onto live video. Every one of those is computer vision, already running quietly around you. "Seeing," in this sense, just means turning pixels into something useful - which is exactly what you're about to build a small, real version of yourself.</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Isn't this just AI?"</b> Yes, in the sense that it's a member of that family - but "AI" is a huge umbrella (game-playing bots, chatbots, robotics planning, and more). Computer vision is specifically the slice of AI/ML concerned with images and video. By the end of this guide you'll have built one small, real example of it yourself.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c0">&larr; Welcome</a>
+        <a href="#" class="nav-link" data-jump="c2">Pixels are just numbers &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         02 - PIXELS
+         ============================================================ -->
+    <section class="concept" id="c2">
+      <div class="crumb">Chapter 02 &middot; Pixels &middot; <b>2 of 12</b></div>
+      <h1 class="c-title">Every Image Is Secretly <span class="accent">Just Numbers</span></h1>
+      <p class="c-tagline">A grayscale image is a grid of pixels - each one a brightness value from <b>0</b> (black) to <b>255</b> (white).</p>
+
+      <div class="diagram-card">
+        <div id="dg-grayscale"></div>
+        <div class="diagram-cap">a zoomed-in corner of a handwritten digit, as numbers</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>"Pixel" is short for <i>picture element</i> - one tiny square sample of brightness. A 28&times;28 grayscale image, like every digit in MNIST, is nothing more than a 28-row, 28-column table of integers, each between 0 and 255. There is no image "underneath" the numbers waiting to be revealed - the grid of numbers <i>is</i> the image. What your eyes do when you look at a photo (assemble tiny brightness samples into a picture) is exactly what the computer's display does, just electronically.</p>
+        <p><code>image.shape</code> reports <code>(28, 28)</code> - 28 rows, 28 columns, one number per cell. <code>image[10][14]</code> looks up row 10, column 14, and returns one integer: how bright that single square is.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">read_pixels.py</span></div>
+        <pre><code class="code-py">image.shape        # (28, 28)  - 28 rows, 28 columns
+image[10][14]      # 231        - brightness of one pixel
+image[3][3]        # 12         - almost black</code></pre>
+      </div>
+
+      <div class="h2"><span class="num">02</span>Why 0&ndash;255?</div>
+      <div class="body-copy">
+        <p>Each pixel is traditionally stored as one byte - 8 bits - which has exactly 2<sup>8</sup> = 256 possible values, 0 through 255. That's a practical, historical choice (one byte per pixel is compact and was plenty of precision for 1990s displays and human eyes), not a mathematical law. 0 means "no light" (black); 255 means "maximum light" (white); everything between is a shade of gray.</p>
+        <p>One detail worth flagging for later: by the time this grid reaches the neural network in <code>mnist_net.ipynb</code>, it's been divided by 255 so every value is a float between 0.0 and 1.0 instead of an integer 0&ndash;255. That's just rescaling for numerical stability during training (Section 11, Gradient Descent, explains why big/uneven input ranges cause trouble) - it doesn't change what a pixel <i>means</i>, only the units it's measured in.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Picture a small patch of raw numbers with no image attached - just a grid of integers. Try to guess where the "ink" of the digit sits, purely from the numbers, before matching it to the rendered picture. Low numbers cluster where the pen touched the paper; high numbers are the blank background. It's a genuine "aha" that reframes "image" as "data."</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Why is black 0 and white 255, not the other way round?"</b> It's a convention about <i>light</i>, not ink: 0 units of light reaching your eye is darkness, and more light is brighter, up to the maximum the format can represent. (Contrast this with printer ink or paint, where more pigment means darker - the opposite convention. Worth remembering, since it trips people up.)</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c1">&larr; What is computer vision?</a>
+        <a href="#" class="nav-link" data-jump="c3">RGB - three stacked grids &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         03 - RGB
+         ============================================================ -->
+    <section class="concept" id="c3">
+      <div class="crumb">Chapter 02 &middot; Pixels &middot; <b>3 of 12</b></div>
+      <h1 class="c-title">Color = <span class="accent-teal">Three Grids</span> Stacked Together</h1>
+      <p class="c-tagline">Color images add Red, Green, and Blue channels - one grid per color, layered like transparent sheets of glass.</p>
+
+      <div class="diagram-card">
+        <div id="dg-rgb"></div>
+        <div class="diagram-cap">three separate brightness grids, one per color channel, stacked into a single color image</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>A grayscale image needs one number per pixel: brightness. A color image needs three: how much red light, how much green light, how much blue light. <code>image.shape</code> for a color image is <code>(28, 28, 3)</code> - same 28&times;28 grid of positions as before, but now each position holds <i>three</i> numbers instead of one. <code>image[10][14]</code> returns a list like <code>[231, 84, 12]</code> (R, G, B), and <code>image[10][14][0]</code> drills into just the red channel's value at that pixel.</p>
+        <p>Mixing is <b>additive</b>: red light + green light + blue light, all at full strength, makes white - the opposite of mixing paint (subtractive), where all colors together make a muddy black-brown. This is the single most common misconception about color, worth preempting (see the analogy below).</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">color_channels.py</span></div>
+        <pre><code class="code-py">image.shape        # (28, 28, 3)
+image[10][14]      # [231, 84, 12]  - R, G, B
+image[10][14][0]   # 231            - just the red value</code></pre>
+      </div>
+
+      <div class="h2"><span class="num">02</span>Why this slide, if the exercise uses grayscale?</div>
+      <div class="body-copy">
+        <p>MNIST (today's dataset) is grayscale, and <code>mnist_net.ipynb</code> never touches an RGB channel. This slide exists to complete the mental model of "what an image is" in general - most photos you take on your phone <i>are</i> RGB, and understanding that color is just more stacked grids (not some fundamentally different kind of data) makes every other CV example you encounter after this easier to parse. It also sets up an important idea for later: filters in a real CNN operate across <i>all</i> channels of a pixel simultaneously, not channel-by-channel.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Think stage lighting, not paint: three spotlights (red, green, blue) overlapping on a dark stage. Where all three overlap, you get white light, not black. Where only red and green overlap, you get yellow. This matches how screens actually work (every pixel on your phone is three tiny red/green/blue lights) - and it's why the paint-mixing instinct from art class leads you astray here.</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Why three numbers and not more, or just one?"</b> Human eyes have three types of color-sensing cone cells (roughly tuned to red, green, and blue wavelengths) - three channels is enough to reproduce any color a person can perceive, which is why displays and image formats settled on exactly three. It's a fact about human biology as much as engineering.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c2">&larr; Pixels are just numbers</a>
+        <a href="#" class="nav-link" data-jump="c4">Convolution &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         04 - CONVOLUTION
+         ============================================================ -->
+    <section class="concept" id="c4">
+      <div class="crumb">Chapter 03 &middot; Filters &middot; <b>4 of 12</b></div>
+      <h1 class="c-title">Filters Slide a <span class="accent">Tiny Window</span> Across the Image</h1>
+      <p class="c-tagline">A kernel is a small grid of numbers that slides over the image, multiplying and adding as it goes.</p>
+
+      <div class="diagram-card">
+        <div id="dg-conv"></div>
+        <div class="diagram-cap">the 3&times;3 window slides across the grid, one step at a time</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>A <b>kernel</b> (also called a filter) is a small matrix of numbers - 3&times;3 is typical. To apply it, place it over a 3&times;3 patch of the image, multiply each kernel value by the image value underneath it, and add up all nine products into a single output number. Slide the kernel one step to the right, repeat. Slide it down a row, repeat. The result is a brand-new grid - smaller than the original, since the window can't hang off the edge - called a <b>feature map</b>.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">convolve.py</span></div>
+        <pre><code class="code-py">def convolve(patch, kernel):
+    total = 0
+    for r in range(3):
+        for c in range(3):
+            total += patch[r][c] * kernel[r][c]
+    return total</code></pre>
+      </div>
+
+      <div class="h2"><span class="num">02</span>The key insight: the same kernel, everywhere</div>
+      <div class="body-copy">
+        <p>The kernel's nine numbers stay <b>fixed</b> as it slides - that's called <b>parameter sharing</b>, and it's the single most important idea in this section. Because the exact same nine weights are reused at every position in the image, a kernel that's learned to detect "a vertical edge" detects vertical edges <i>anywhere</i> in the picture, not just in one spot. That's a huge efficiency win over connecting every pixel to every neuron independently (which is what our actual exercise network does, for contrast - see Section 07, Layers).</p>
+        <p>Two vocabulary words worth knowing: <b>stride</b> is how many pixels the window jumps each step (this workshop always uses a stride of 1); <b>padding</b> is adding a border of zeros around the image so the output feature map can stay the same size as the input, instead of shrinking. Neither is essential to the core intuition.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Before looking at any code, try computing one convolution output by hand: take a simple 5&times;5 grid of numbers, lay a 3&times;3 kernel over one corner, multiply nine pairs, add them up. Most people only need to do this once to fully internalize the mechanic - after that, the sliding animation above clicks immediately.</p>
+      </div>
+
+      <div class="callout honest">
+        <div class="callout-label">⚠ Keep this in mind</div>
+        <p><b>The network you build in this workshop does not use convolution.</b> <code>mnist_net.ipynb</code> builds a plain fully-connected network (every one of the 784 input pixels connects directly to every one of the 128 hidden neurons - no sliding kernel anywhere). Convolution is taught here because it's the clearest way to explain "a filter looks for a pattern" and it's the foundation of real production computer vision (CNNs), but keeping the exercise convolution-free keeps the math small enough to hand-derive and code from scratch in one session. Worth remembering - it heads off a confusing moment later when you inspect the notebook and don't find any kernels.</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Who decides what numbers go in the kernel?"</b> In classical image processing, a human hand-designs them (like the edge kernel in the next section). In a real CNN, the kernel's numbers start random and are <i>learned</i> automatically through training - the exact same gradient descent process covered in Section 11, just applied to kernel weights instead of the dense-layer weights our exercise trains.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c3">&larr; RGB - three stacked grids</a>
+        <a href="#" class="nav-link" data-jump="c5">Edge detection &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         05 - EDGE DETECTION
+         ============================================================ -->
+    <section class="concept" id="c5">
+      <div class="crumb">Chapter 03 &middot; Filters &middot; <b>5 of 12</b></div>
+      <h1 class="c-title">Different Filters Reveal <span class="accent-teal">Different Features</span></h1>
+      <p class="c-tagline">An edge-detecting filter lights up wherever brightness changes sharply - the outline of the digit.</p>
+
+      <div class="diagram-card">
+        <div id="dg-edges"></div>
+        <div class="diagram-cap">the same digit, before and after an edge kernel</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>Different kernels detect different things purely by virtue of their numbers. The slide's edge kernel is a classic vertical-edge detector (a version of the <b>Sobel</b> filter):</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">edge_kernel.py</span></div>
+        <pre><code class="code-py">edge_kernel = [
+    [-1,  0,  1],
+    [-2,  0,  2],
+    [-1,  0,  1],
+]  # lights up vertical edges</code></pre>
+      </div>
+
+      <div class="body-copy">
+        <p>Read it as "negative on the left, positive on the right." If a 3&times;3 patch is uniform (flat region - background, or the solid middle of a pen stroke), the negative and positive products cancel out and the output is near zero. If the patch straddles a real edge (dark pen stroke on one side, bright background on the other), the negative side and positive side <i>don't</i> cancel - they add constructively into a large output, positive or negative depending on which side is darker. Large-magnitude output = "there's a sharp transition here" = an edge.</p>
+      </div>
+
+      <div class="h2"><span class="num">02</span>Why this matters beyond "cool effect"</div>
+      <div class="body-copy">
+        <p>This is the clearest possible demonstration that a network "sees" by responding to <i>patterns</i>, not by understanding an image the way a person does. Edges matter because the outline of a digit carries most of the information needed to recognize it - flat interior regions (all-white background, all-black pen-fill) carry comparatively little. A real CNN's early layers learn kernels that behave a lot like this hand-designed one, purely from data, without anyone telling them "look for edges" - which is exactly the segue into Loss and Gradient Descent later today.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Try two contrasting 3&times;3 patches: one flat (same value everywhere), one with a hard left-dark/right-bright split. Apply the edge kernel to both by hand. Flat gives you ~0. Split gives you a big number. That's the entire concept, felt rather than just stated.</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"How does the network learn the right kernel automatically, instead of a human designing it?"</b> That's precisely what training does. Section 11 (Gradient Descent) shows the mechanism in full: start with random numbers, measure how wrong the current numbers make the model, and nudge every number slightly in the direction that reduces that wrongness - repeated thousands of times. A CNN's kernels get tuned by that exact loop; this exercise applies the same loop to the dense-layer weights instead.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c4">&larr; Convolution</a>
+        <a href="#" class="nav-link" data-jump="c6">The neuron &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         06 - NEURON
+         ============================================================ -->
+    <section class="concept" id="c6">
+      <div class="crumb">Chapter 04 &middot; Neurons &middot; <b>6 of 12</b></div>
+      <h1 class="c-title">A Neuron <span class="accent">Weighs Its Evidence</span></h1>
+      <p class="c-tagline">Each neuron multiplies every input by a weight, adds them up, and asks: is this enough to fire?</p>
+
+      <div class="diagram-card">
+        <div id="dg-neuron"></div>
+        <div class="diagram-cap">signal flowing from inputs, through the weighted sum, through activation, to the output</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>A single artificial neuron does three things: multiply each input by its own personal weight, add all those products together, and add one more fixed number called the <b>bias</b>. That's it - no magic, just a weighted sum.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">neuron.py</span></div>
+        <pre><code class="code-py">def neuron(inputs, weights, bias):
+    total = sum(i * w for i, w in zip(inputs, weights))
+    return total + bias</code></pre>
+      </div>
+
+      <div class="body-copy">
+        <p>A <b>weight</b> represents how much that particular input matters to this particular neuron - large positive means "strongly increases my output when this input is high," large negative means "strongly decreases it," near-zero means "I mostly ignore this input." A <b>bias</b> is a fixed offset added regardless of the inputs - think of it as the neuron's built-in tendency to fire or not fire even before it sees any evidence, a baseline that training can shift up or down independently of the weights.</p>
+      </div>
+
+      <div class="h2"><span class="num">02</span>The unifying insight: convolution <i>is</i> a neuron</div>
+      <div class="body-copy">
+        <p>Look back at <code>convolve.py</code> from Section 04 - multiply corresponding values, add them all up. That's exactly the weighted-sum half of a neuron, where the nine kernel values <i>are</i> the nine weights and the nine pixels under the window <i>are</i> the nine inputs. A convolution is a neuron whose inputs happen to be a small patch of an image, reused (via parameter sharing) at every position. This is genuinely one idea wearing two hats, and it's worth pointing out explicitly - both concepts tend to click into place at once.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>A neuron is a <b>judge scoring a competition</b>. Each judge (input) hands in a score. The weights represent how much you personally trust each judge's opinion - you might weight the technical judge higher than the crowd-reaction judge. The bias is a starting handicap you give (or take from) the contestant before any scores come in at all. Add it all up, and that total is the neuron's raw opinion.</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Does the neuron literally switch on and off, like a light switch or a real brain cell?"</b> Not quite - that's a loose biological inspiration, not a literal mechanism. In this model, "firing" just means producing a large positive number after activation (Section 08 covers ReLU, which is the function that decides how the raw weighted sum turns into the neuron's actual output). It's a continuous, graded response, not a hard binary switch.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c5">&larr; Edge detection</a>
+        <a href="#" class="nav-link" data-jump="c7">Layers &amp; the network &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         07 - LAYERS
+         ============================================================ -->
+    <section class="concept" id="c7">
+      <div class="crumb">Chapter 04 &middot; Neurons &middot; <b>7 of 12</b></div>
+      <h1 class="c-title">Stack Thousands of Neurons Into <span class="accent-teal">Layers</span></h1>
+      <p class="c-tagline">Our network takes <b>784</b> pixel values in, thinks with a hidden layer, and outputs <b class="c">10</b> digit scores.</p>
+
+      <div class="diagram-card">
+        <div id="dg-layers"></div>
+        <div class="diagram-cap">784 input pixels &rarr; 128 hidden neurons &rarr; 10 output scores</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>One neuron can only express one weighted opinion. A <b>layer</b> is many neurons side by side, all looking at the same inputs, each with its own independent weights and bias - so a layer of 128 neurons forms 128 different weighted opinions about the same 784 pixels simultaneously. Our network has two layers of trainable weights: 784 pixels flow into a hidden layer of 128 neurons, whose 128 outputs flow into a final layer of 10 neurons - one per digit, 0 through 9.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">layers.py</span></div>
+        <pre><code class="code-py">W1 = random_matrix(784, 128)   # input → hidden
+W2 = random_matrix(128, 10)    # hidden → output</code></pre>
+      </div>
+
+      <div class="body-copy">
+        <p>This is the moment where "many neurons, each doing a weighted sum" becomes "one matrix multiplication," and it's worth making explicit: <code>W1</code> is a (784, 128) grid of numbers - one column per hidden neuron, one row per input pixel, so column <i>j</i> holds neuron <i>j</i>'s 784 weights. Computing <b>all 128 hidden neurons' weighted sums at once</b> is exactly what <code>x @ W1</code> does in one line of NumPy - matrix multiplication <i>is</i> "every neuron in this layer, computed in parallel." That's why the actual notebook code is this short.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">from mnist_net.ipynb - the real forward pass</span></div>
+        <pre><code class="code-py">def forward(self, x):
+    self.z1 = x @ self.W1      # (batch, 784) @ (784, 128) -> (batch, 128)
+    self.h  = relu(self.z1)    # activation - Section 08
+    self.z2 = self.h @ self.W2 # (batch, 128) @ (128, 10)  -> (batch, 10)
+    self.probs = softmax(self.z2)  # Section 09
+    return self.probs</code></pre>
+      </div>
+
+      <div class="h2"><span class="num">02</span>Why two layers, and why 128?</div>
+      <div class="body-copy">
+        <p><b>128 is not derived from a formula</b> - it's a hyperparameter, a practical choice made by experimentation (bigger gives the model more capacity to represent patterns but costs more compute and risks overfitting a small dataset; smaller trains faster but may underfit). If you find yourself wondering "why 128 and not 100 or 200" - the honest answer is "someone tried a reasonable round number that works well here," not a derived constant.</p>
+        <p>The deeper reason for having <i>two</i> layers instead of one giant layer is more interesting and directly sets up the next section: without something nonlinear between them, stacking two matrix multiplications is mathematically pointless. <code>(x @ W1) @ W2</code> is algebraically identical to <code>x @ (W1 @ W2)</code> - one single combined matrix - so two "layers" collapse into exactly the same expressive power as one. Section 08 (Activation Functions) is the fix.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Try computing the total number of trainable weights yourself: 784&times;128 + 128&times;10 = <b>102,912</b> individual numbers. It makes "training the network" feel concrete rather than abstract - that's the size of the haystack gradient descent is searching, one small nudge at a time, for every single one of those numbers.</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Why not just one giant layer instead of two?"</b> Two reasons worth knowing: (1) as explained above, without a nonlinearity in between, two linear layers mathematically collapse into one anyway, so "two layers, no activation" buys nothing; (2) even with activation, a single very wide layer struggles to build up the kind of layered, hierarchical pattern-recognition that makes deep networks effective - though for a problem as small as MNIST digits, a single hidden layer (as we use here) is already enough to do the job well.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c6">&larr; The neuron</a>
+        <a href="#" class="nav-link" data-jump="c8">Activation - ReLU &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         08 - ACTIVATION
+         ============================================================ -->
+    <section class="concept" id="c8">
+      <div class="crumb">Chapter 05 &middot; Nonlinearity &middot; <b>8 of 12</b></div>
+      <h1 class="c-title">Activation Functions Let the Network <span class="accent">Bend</span></h1>
+      <p class="c-tagline">Without them, stacking layers is pointless. <b>ReLU</b> keeps positive signals and zeroes out the rest.</p>
+
+      <div class="diagram-card">
+        <div id="dg-activation"></div>
+        <div class="diagram-cap">ReLU: flat at zero for negative inputs, a straight line for positive inputs</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p><b>ReLU</b> (Rectified Linear Unit) is about as simple as functions get: if the input is negative, output zero; otherwise, pass the input straight through unchanged.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">relu.py</span></div>
+        <pre><code class="code-py">def relu(x):
+    return max(0, x)</code></pre>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">from mnist_net.ipynb - vectorized over a whole batch</span></div>
+        <pre><code class="code-py">def relu(x):
+    return np.maximum(0, x)</code></pre>
+      </div>
+
+      <div class="h2"><span class="num">02</span>Why this tiny function matters so much</div>
+      <div class="body-copy">
+        <p>Section 07 ended on the fact that two matrix multiplications in a row collapse into one - <code>(x @ W1) @ W2 = x @ (W1 @ W2)</code>. ReLU breaks that collapse. Because <code>max(0, ·)</code> can't be factored out or absorbed into a matrix the way multiplication can, <code>relu(x @ W1) @ W2</code> is <b>not</b> reducible to a single matrix multiply - the network genuinely gains expressive power from having it there. This is the entire justification for activation functions in one sentence, and it's worth stating explicitly rather than leaving it as "trust me, we need this."</p>
+        <p>ReLU itself is piecewise <i>linear</i> - two straight-line pieces meeting at a kink at zero - not curved. The network's <i>overall</i> function still becomes genuinely nonlinear (able to represent curved, complex decision boundaries) because each of the 128 hidden neurons has its own kink, positioned differently depending on its own weights and bias - hundreds of little folds combine into something that can bend around real, messy data.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Hold up a flat piece of paper. A function built only from straight lines and multiplication can tilt that paper, stretch it, or flip it - but it can never fold it. Now actually fold the paper once. That's what one activation function's kink buys you; a whole layer of them, each folding along a different line, is how the network can eventually wrap a decision boundary around a genuinely curved, complicated shape like "everything that looks like a handwritten 3."</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Are there other activation functions?"</b> Yes - sigmoid and tanh were historically popular (they squash outputs into a fixed range and are smoothly curved everywhere, no kink), and modern large networks often use smoother ReLU variants (GELU, SiLU). ReLU is used here because it's simple to compute, simple to differentiate for backprop, and it's what actually trains fastest and most reliably for a network this size - it's the practical default, not the only option.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c7">&larr; Layers &amp; the network</a>
+        <a href="#" class="nav-link" data-jump="c9">Softmax &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         09 - SOFTMAX
+         ============================================================ -->
+    <section class="concept" id="c9">
+      <div class="crumb">Chapter 05 &middot; Nonlinearity &middot; <b>9 of 12</b></div>
+      <h1 class="c-title">Softmax Turns Scores Into <span class="accent-teal">Confidence</span></h1>
+      <p class="c-tagline">The output layer's raw numbers become a confidence percentage for each digit, 0 through 9.</p>
+
+      <div class="diagram-card">
+        <div id="dg-softmax"></div>
+        <div class="diagram-cap">ten raw scores become ten probabilities that sum to exactly 1</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>The final layer's ten raw outputs (called <b>logits</b>) are just numbers - they can be negative, and they don't sum to anything meaningful. Softmax converts them into a genuine probability distribution: ten values, each between 0 and 1, all summing to exactly 1 - "the network is 71% sure this is a 7, 7% sure it's a 9," and so on.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">softmax.py</span></div>
+        <pre><code class="code-py">import math
+
+def softmax(scores):
+    exps = [math.exp(s) for s in scores]
+    return [e / sum(exps) for e in exps]</code></pre>
+      </div>
+
+      <div class="body-copy">
+        <p>Two steps: exponentiate every score (<code>e</code> raised to the power of each score), then divide each result by the total. Exponentiating does two jobs at once - it makes every value positive (fixing the "logits can be negative" problem, since <code>e</code> to any power is always positive), and it <i>exaggerates</i> differences (a score that's a little higher than the others becomes proportionally much higher after exponentiating). Dividing by the sum then forces everything to add up to exactly 1, which is what makes the result a valid probability distribution.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">from mnist_net.ipynb - the numerically stable version</span></div>
+        <pre><code class="code-py">def softmax(x):
+    shifted = x - x.max(axis=1, keepdims=True)  # prevents float overflow
+    exps = np.exp(shifted)
+    return exps / exps.sum(axis=1, keepdims=True)</code></pre>
+      </div>
+
+      <div class="body-copy">
+        <p>If you open the real notebook you'll see that extra <code>x - x.max(...)</code> step and might wonder about it. Subtracting the largest score from every score before exponentiating doesn't change the final probabilities at all (it's mathematically equivalent to the simple version), but it keeps every exponent &le; 0, which avoids <code>e</code> raised to a huge number overflowing into infinity in floating-point arithmetic. It's an engineering safeguard, not a conceptual difference.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Softmax is like converting raw <b>vote counts</b> in an election into <b>percentage of the vote</b> - except a landslide winner's percentage gets exaggerated even further relative to a photo-finish, because of the exponentiation. A close raw score gap becomes a bigger confidence gap.</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Why not just pick the biggest raw score directly and skip softmax?"</b> For making a single prediction, picking the biggest raw score (argmax) actually gives the identical answer as picking the biggest softmax probability - softmax doesn't change which digit "wins." But <b>training</b> needs more than a winner; it needs a smooth, graded measure of how confident and how wrong each guess was, which requires genuine probabilities. That measure is the <b>loss</b>, covered next.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c8">&larr; Activation - ReLU</a>
+        <a href="#" class="nav-link" data-jump="c10">Loss &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         10 - LOSS
+         ============================================================ -->
+    <section class="concept" id="c10">
+      <div class="crumb">Chapter 06 &middot; Training &middot; <b>10 of 12</b></div>
+      <h1 class="c-title">Loss Measures <span class="accent">How Wrong</span> the Guess Was</h1>
+      <p class="c-tagline">We compare the network's confidence to the true answer - a big gap means a big loss.</p>
+
+      <div class="diagram-card">
+        <div id="dg-loss"></div>
+        <div class="diagram-cap">the true answer vs. what the network guessed - the gap between them is the loss</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>After softmax, the network has produced a confidence percentage for every digit. <b>Loss</b> boils that entire distribution down into a single number: how bad was this specific guess? We use <b>cross-entropy loss</b>, which only looks at the probability the model assigned to the <i>correct</i> answer:</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">loss.py</span></div>
+        <pre><code class="code-py">def loss(predicted, true_label):
+    return -math.log(predicted[true_label])</code></pre>
+      </div>
+
+      <div class="body-copy">
+        <p>Walk the numbers: if the true label is 7 and the model assigned <code>predicted[7] = 0.71</code>, the loss is <code>-log(0.71) &asymp; 0.34</code> - small, because the model was confident <i>and</i> correct. If instead <code>predicted[7] = 0.02</code> (the model was confidently wrong, betting almost everything on some other digit), the loss is <code>-log(0.02) &asymp; 3.9</code> - over ten times larger. As the correct-answer probability approaches 1, <code>-log(p)</code> approaches 0 (near-zero loss for a great guess). As it approaches 0, <code>-log(p)</code> shoots toward infinity - the penalty for confident wrongness is deliberately severe, not linear.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">from mnist_net.ipynb - averaged over a batch</span></div>
+        <pre><code class="code-py">def cross_entropy_loss(probs, labels):
+    n = len(labels)
+    correct_confidences = probs[np.arange(n), labels]
+    return -np.mean(np.log(correct_confidences + 1e-12))</code></pre>
+      </div>
+
+      <div class="body-copy">
+        <p>(The <code>+ 1e-12</code> is another small engineering safeguard, same spirit as softmax's numerical-stability trick - it stops <code>log(0)</code>, which is undefined, from ever occurring if a predicted probability rounds all the way down to exactly zero.)</p>
+      </div>
+
+      <div class="h2"><span class="num">02</span>Why this single number drives everything that follows</div>
+      <div class="body-copy">
+        <p>Loss is the number gradient descent (next section) is trying to make as small as possible, across every training example. It's the "height" in the "rolling downhill" analogy - the whole training loop's entire purpose is to adjust the network's ~103,000 weights until this one number, averaged across thousands of examples, gets as low as it can.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Grab a calculator and try a few probability values yourself - <code>p = 0.99, 0.5, 0.1, 0.01</code> - and compute <code>-log(p)</code> for each before looking at the shape of the curve above. Feeling the numbers explode as <code>p</code> approaches 0 makes "confidently wrong is punished much harder than honestly uncertain" a felt fact, not just an assertion.</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Why <code>-log</code> and not something simpler, like just <code>1 - predicted probability</code>?"</b> The log-based version punishes bad mistakes far more aggressively and - the deeper mathematical reason, which you can take on faith for now - its gradient (how much nudging one weight changes the loss) stays large and useful exactly when the model is very wrong, which is when it most needs a strong training signal. A simpler <code>1 - p</code> measure gives comparatively weak feedback throughout, and trains much more slowly and less effectively in practice.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c9">&larr; Softmax</a>
+        <a href="#" class="nav-link" data-jump="c11">Gradient descent &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         11 - GRADIENT DESCENT
+         ============================================================ -->
+    <section class="concept" id="c11">
+      <div class="crumb">Chapter 06 &middot; Training &middot; <b>11 of 12</b></div>
+      <h1 class="c-title">Gradient Descent <span class="accent-teal">Rolls the Loss Downhill</span></h1>
+      <p class="c-tagline">After every mistake, we nudge each weight slightly in the direction that reduces the loss.</p>
+
+      <div class="diagram-card">
+        <div id="dg-descent"></div>
+        <div class="diagram-cap">the loss landscape - every step moves a little further downhill toward the best weights</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The big idea</div>
+      <div class="body-copy">
+        <p>Picture the loss (Section 10) as the <i>height</i> of a landscape, and the network's current weights as your <i>position</i> on that landscape. Training is a blindfolded hiker repeatedly asking "which direction is downhill from exactly where I'm standing right now?" and taking one small step that way - over and over, thousands of times, gradually descending toward a low point where the loss is small and the network's predictions are good.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">update.py</span></div>
+        <pre><code class="code-py">weight = weight - learning_rate * gradient</code></pre>
+      </div>
+
+      <div class="body-copy">
+        <p>Unpack every term: the <b>gradient</b> is "which direction, and how strongly, this one specific weight is currently pushing the loss up" - computed by a process called <b>backpropagation</b> (the calculus itself is out of scope for this workshop; the notebook's <code>backprop()</code> function does it, and the bowl-rolling analogy is the right level of understanding to build here). The <b>learning rate</b> is how big a step to take on each update. Subtracting <code>learning_rate &times; gradient</code> moves the weight a small step in the direction that <i>decreases</i> the loss - literally downhill.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-head"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="filename">from mnist_net.ipynb - updating both weight matrices</span></div>
+        <pre><code class="code-py">def update(self, grads, learning_rate):
+    dW1, dW2 = grads
+    self.W1 -= learning_rate * dW1
+    self.W2 -= learning_rate * dW2</code></pre>
+      </div>
+
+      <div class="h2"><span class="num">02</span>Learning rate: the one knob everything hinges on</div>
+      <div class="body-copy">
+        <p>Too small a learning rate and training crawls - technically correct direction, but it takes forever to actually get anywhere. Too large and the hiker overshoots the valley entirely, possibly landing somewhere <i>higher</i> than they started, and can bounce around without ever settling. Getting this one number roughly right (today's exercise uses <code>0.3</code>, tuned by trial and error, exactly like the 128-neuron choice in Section 07) matters more than almost anything else in the training loop.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Picture a bowl-shaped landscape and a blindfolded hiker whose only tool is asking "is the ground to my left lower or higher than where I'm standing?" one step at a time. Now imagine that hiker takes giant leaps instead of small careful steps - they'll likely overshoot the bottom entirely, maybe landing higher up the other side than where they started. That's exactly what too large a learning rate does to training.</p>
+      </div>
+
+      <div class="callout faq">
+        <div class="callout-label">❓ Question you might have</div>
+        <p><b>"Does the network see the whole landscape and find the very best possible weights?"</b> No - it's a purely local, greedy process. It only ever knows the slope right where it's currently standing, starting from random initial weights, and it can settle into a valley that's good but not the very best one possible (a <b>local minimum</b> rather than the <b>global minimum</b>). For a network and dataset this size, this isn't a practical obstacle - but it's an honest, real limitation, and modern large-scale training has entire families of tricks built around managing it.</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c10">&larr; Loss</a>
+        <a href="#" class="nav-link" data-jump="c12">Putting it together &rarr;</a>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         12 - PUTTING IT TOGETHER
+         ============================================================ -->
+    <section class="concept" id="c12">
+      <div class="crumb">Wrap-up &middot; <b>12 of 12</b></div>
+      <h1 class="c-title">Putting It All <span class="accent">Together</span></h1>
+      <p class="c-tagline">Every concept above is one gear in a single machine. Here's how they mesh, mapped straight onto <code>mnist_net.ipynb</code>.</p>
+
+      <div class="diagram-card">
+        <div id="dg-roadmap2"></div>
+        <div class="diagram-cap">the same five stages from the welcome page - now you've seen inside every one of them</div>
+      </div>
+
+      <div class="h2"><span class="num">01</span>The full pipeline, one pass through</div>
+      <div class="body-copy">
+        <p>A single handwritten digit's journey through the network, start to finish:</p>
+        <p>1. <b>Pixels</b> (Section 02) - the 28&times;28 image is flattened into a list of 784 numbers, scaled to 0&ndash;1.<br>
+        2. <b>Layer 1</b> (Section 07) - <code>x @ W1</code> computes all 128 hidden neurons' weighted sums at once.<br>
+        3. <b>Activation</b> (Section 08) - ReLU zeroes out negative hidden values, letting the network bend.<br>
+        4. <b>Layer 2</b> (Section 07) - <code>h @ W2</code> computes 10 raw output scores, one per digit.<br>
+        5. <b>Softmax</b> (Section 09) - the 10 scores become 10 confidence percentages summing to 1.<br>
+        6. <b>Loss</b> (Section 10) - compare the confidence in the true digit against a perfect guess.<br>
+        7. <b>Gradient descent</b> (Section 11) - every one of the ~103,000 weights nudges slightly downhill.<br>
+        8. Repeat steps 1&ndash;7 thousands of times, across thousands of training images, over several <b>epochs</b> (full passes through the training data), until accuracy on held-out data is good.</p>
+        <p>Notice <b>convolution and edge detection</b> (Sections 04&ndash;05) aren't in this list - as flagged earlier, they're taught conceptually to build intuition for how filters and feature-detection work in real computer vision, but the exercise's dense network skips straight from raw pixels to the first weighted layer.</p>
+      </div>
+
+      <div class="h2"><span class="num">02</span>Two methodology lessons worth internalizing from the exercise</div>
+      <div class="body-copy">
+        <p><b>Train / validation / test split.</b> The notebook carves out a genuine validation set from the training data to check progress during training, and touches the test set exactly once, right at the very end. This isn't busywork - peeking at test data while training (letting it influence any decision, even indirectly) is how you fool yourself into overestimating a model's real-world accuracy. Worth remembering as a general scientific-methodology lesson, not just a coding detail.</p>
+        <p><b>Colab vs. local Jupyter.</b> The live drawing pad at the end of the notebook uses different code depending on where it runs - Colab's sandboxed environment can't run the <code>ipycanvas</code> widget used locally, so it falls back to a plain HTML5 canvas that pushes the drawing to Python via <code>google.colab.output.register_callback</code>. This is purely a platform-compatibility detail, not a new CV or ML concept - worth knowing if you notice the branching <code>IN_COLAB</code> code in the notebook.</p>
+      </div>
+
+      <div class="h2"><span class="num">03</span>Where to go next</div>
+      <div class="body-copy">
+        <p>The last deck slide links directly to <code>exercise.html</code>, which walks through the dataset, the network build, the training loop, and live testing in the same visual language as the concept deck - and its Colab button opens <code>mnist_net.ipynb</code> directly in the browser, no local setup required. Everything you'll see in that notebook is <i>exactly</i> the code shown across these sections, just vectorized to run on a whole batch of images at once instead of one number at a time.</p>
+      </div>
+
+      <div class="callout tip">
+        <div class="callout-label">💡 Analogy</div>
+        <p>Before you open the notebook, guess: roughly what accuracy do you think a network like this can reach on handwritten digits it's never seen? Hold that number in your head, then compare it against the real result once training finishes (typically high-90s%). It's a satisfying check - and a good moment to think about why it's not 100% (some handwriting is genuinely ambiguous even to humans).</p>
+      </div>
+
+      <div class="footer-nav">
+        <a href="#" class="nav-link" data-jump="c11">&larr; Gradient descent</a>
+        <a href="exercise.html" class="nav-link">Open the exercise deck &rarr;</a>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ===========================================
+   SVG DIAGRAM HELPERS - shared visual language
+   (ported from index.html for visual consistency)
+   =========================================== */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function svgRoot(vb){ return el('svg', {viewBox:vb, preserveAspectRatio:'xMidYMid meet'}); }
+function mount(id, svg){ const host=document.getElementById(id); if(!host) return; host.innerHTML=''; host.appendChild(svg); }
+function hexToRgb(hex){ hex=hex.replace('#',''); const n=parseInt(hex,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function mix(hexA,hexB,t){ const a=hexToRgb(hexA),b=hexToRgb(hexB); const l=(x,y)=>Math.round(x+(y-x)*t); return `rgb(${l(a[0],b[0])},${l(a[1],b[1])},${l(a[2],b[2])})`; }
+function animateMotion(path, dur, begin){
+  const a = el('animateMotion', {dur:dur, repeatCount:'indefinite', path, begin: begin||'0s', rotate:'auto'});
+  return a;
+}
+
+const INK='#221F26', PAPER='#FFFDF8', CORAL='#FF6B4A', TEAL='#0E8C82', YELLOW='#FFC145', SKY='#3E8FD6';
+
+const DIGIT_BITMAPS = {
+  3:['11111','00010','00100','00010','00001','10001','01110'],
+  8:['01110','10001','10001','01110','10001','10001','01110']
+};
+
+function arrow(x1,y1,x2,y2,cls){
+  const g=el('g',{class:cls||''});
+  g.appendChild(el('line',{x1,y1,x2,y2,stroke:INK,'stroke-width':3}));
+  const angle=Math.atan2(y2-y1,x2-x1);
+  const ah=10;
+  const p1x=x2-ah*Math.cos(angle-0.4), p1y=y2-ah*Math.sin(angle-0.4);
+  const p2x=x2-ah*Math.cos(angle+0.4), p2y=y2-ah*Math.sin(angle+0.4);
+  g.appendChild(el('path',{d:`M${x2},${y2} L${p1x},${p1y} M${x2},${y2} L${p2x},${p2y}`,stroke:INK,'stroke-width':3,'stroke-linecap':'round'}));
+  return g;
+}
+function pulseDot(r, color){
+  const c = el('circle',{r, fill:color, class:'pulse-dot'});
+  return c;
+}
+
+/* ---------- Roadmap step-flow (reused for section 00 and 12) ---------- */
+function renderRoadmap(id){
+  const W=1000,H=340; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const steps=[
+    {icon:'camera',label:'Pixels',color:CORAL},
+    {icon:'kernel',label:'Filters',color:YELLOW},
+    {icon:'neuron',label:'Neurons',color:TEAL},
+    {icon:'loss',label:'Training',color:SKY},
+    {icon:'flag',label:'Prediction',color:CORAL},
+  ];
+  const n=steps.length; const pad=70; const gap=(W-pad*2)/(n-1);
+  const cy=H*0.42;
+  const pathD = `M${pad},${cy} L${W-pad},${cy}`;
+  svg.appendChild(el('line',{x1:pad,y1:cy,x2:W-pad,y2:cy,stroke:INK,'stroke-width':3,'stroke-dasharray':'2 14','stroke-linecap':'round'}));
+  const dot = pulseDot(9, CORAL);
+  dot.appendChild(animateMotion(pathD, '4s'));
+  svg.appendChild(dot);
+  steps.forEach((s,i)=>{
+    const cx = pad + i*gap;
+    const g = el('g',{});
+    g.appendChild(el('circle',{cx,cy,r:44,fill:PAPER,stroke:INK,'stroke-width':4}));
+    g.appendChild(el('circle',{cx,cy,r:44,fill:s.color,opacity:'0.16'}));
+    drawStepIcon(g, s.icon, cx, cy);
+    const num = el('text',{x:cx,y:cy-62,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'16','fill':INK,'font-weight':'700'});
+    num.textContent = String(i+1).padStart(2,'0');
+    g.appendChild(num);
+    const label = el('text',{x:cx,y:cy+76,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'19','fill':INK,'font-weight':'600'});
+    label.textContent = s.label;
+    g.appendChild(label);
+    svg.appendChild(g);
+  });
+  mount(id, svg);
+}
+function drawStepIcon(g, type, cx, cy){
+  const s = 17;
+  if(type==='camera'){
+    g.appendChild(el('rect',{x:cx-s,y:cy-s*0.6,width:s*2,height:s*1.2,rx:5,fill:'none',stroke:INK,'stroke-width':2.2}));
+    g.appendChild(el('circle',{cx,cy:cy,r:s*0.5,fill:'none',stroke:INK,'stroke-width':2.2}));
+  } else if(type==='kernel'){
+    g.appendChild(el('rect',{x:cx-s,y:cy-s,width:s*2,height:s*2,fill:'none',stroke:INK,'stroke-width':2.2}));
+    g.appendChild(el('line',{x1:cx-s,y1:cy,x2:cx+s,y2:cy,stroke:INK,'stroke-width':1.3}));
+    g.appendChild(el('line',{x1:cx,y1:cy-s,x2:cx,y2:cy+s,stroke:INK,'stroke-width':1.3}));
+  } else if(type==='neuron'){
+    g.appendChild(el('circle',{cx,cy,r:s*0.55,fill:INK}));
+    [0,72,144,216,288].forEach(a=>{
+      const rad=a*Math.PI/180;
+      g.appendChild(el('line',{x1:cx,y1:cy,x2:cx+Math.cos(rad)*s*1.6,y2:cy+Math.sin(rad)*s*1.6,stroke:INK,'stroke-width':1.8}));
+    });
+  } else if(type==='loss'){
+    g.appendChild(el('path',{d:`M${cx-s},${cy-s} Q${cx},${cy+s*1.2} ${cx+s},${cy-s}`,fill:'none',stroke:INK,'stroke-width':2.2}));
+    g.appendChild(el('circle',{cx:cx-s*0.4,cy:cy-s*0.2,r:4,fill:CORAL}));
+  } else if(type==='flag'){
+    g.appendChild(el('path',{d:`M${cx-5},${cy-s} L${cx-5},${cy+s} M${cx-5},${cy-s} L${cx+s},${cy-s*0.6} L${cx-5},${cy-s*0.1} Z`,fill:TEAL,stroke:INK,'stroke-width':1.8}));
+  }
+}
+
+/* ---------- CV intro pipeline ---------- */
+function renderCVIntro(id){
+  const W=1000,H=340; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const cy=H*0.46;
+  const xs=[120,400,660,880];
+  const g1=el('g',{});
+  g1.appendChild(el('rect',{x:xs[0]-60,y:cy-40,width:120,height:80,rx:12,fill:PAPER,stroke:INK,'stroke-width':3.5}));
+  g1.appendChild(el('circle',{cx:xs[0],cy:cy,r:27,fill:'none',stroke:CORAL,'stroke-width':4.5}));
+  g1.appendChild(el('rect',{x:xs[0]-20,y:cy-60,width:40,height:17,rx:4,fill:INK}));
+  svg.appendChild(g1);
+  svg.appendChild(arrow(xs[0]+72,cy,xs[1]-62,cy));
+  const g2=el('g',{});
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+    const v=[10,80,200,240][(r*4+c)%4];
+    g2.appendChild(el('rect',{x:xs[1]-48+c*24,y:cy-48+r*24,width:22,height:22,fill:mix(INK,PAPER,v/255)}));
+  }
+  svg.appendChild(g2);
+  svg.appendChild(arrow(xs[1]+56,cy,xs[2]-66,cy));
+  const g3=el('g',{});
+  g3.appendChild(el('circle',{cx:xs[2],cy,r:46,fill:'none',stroke:TEAL,'stroke-width':4.5}));
+  const sig = el('text',{x:xs[2],y:cy+13,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'30','fill':TEAL,'font-weight':'700'});
+  sig.textContent='f(x)';
+  g3.appendChild(sig);
+  svg.appendChild(g3);
+  svg.appendChild(arrow(xs[2]+50,cy,xs[3]-44,cy));
+  const g4=el('g',{});
+  g4.appendChild(el('rect',{x:xs[3]-44,y:cy-44,width:88,height:88,rx:16,fill:YELLOW}));
+  const num = el('text',{x:xs[3],y:cy+22,'text-anchor':'middle','font-family':'Bricolage Grotesque, sans-serif','font-size':'56','fill':INK,'font-weight':'800'});
+  num.textContent='7';
+  g4.appendChild(num);
+  svg.appendChild(g4);
+
+  const pathD = `M${xs[0]},${cy-70} L${xs[1]},${cy-70} L${xs[2]},${cy-70} L${xs[3]},${cy-70}`;
+  const dot = pulseDot(8, CORAL);
+  dot.appendChild(animateMotion(`M${xs[0]},${cy} L${xs[1]},${cy} L${xs[2]},${cy} L${xs[3]},${cy}`, '4.5s'));
+  svg.appendChild(dot);
+
+  ['a photo','a grid of numbers','a model','a label'].forEach((t,i)=>{
+    const txt=el('text',{x:xs[i],y:cy+96,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'16','fill':'#4A453F'});
+    txt.textContent=t;
+    svg.appendChild(txt);
+  });
+  mount(id,svg);
+}
+
+/* ---------- Grayscale pixel zoom ---------- */
+function renderGrayscale(id){
+  const W=760,H=440; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const bmp = DIGIT_BITMAPS[3];
+  const rows=bmp.length, cols=bmp[0].length;
+  const cell=64, gap=5;
+  const gridW=cols*(cell+gap), gridH=rows*(cell+gap);
+  const x0=(W-gridW)/2, y0=(H-gridH)/2;
+  const g=el('g',{});
+  const values=[];
+  bmp.forEach((row)=>{
+    const vr=[];
+    [...row].forEach((ch)=>{
+      const base = ch==='1' ? 30+Math.random()*40 : 210+Math.random()*40;
+      vr.push(Math.round(base));
+    });
+    values.push(vr);
+  });
+  values.forEach((row,r)=>{
+    row.forEach((v,c)=>{
+      const x=x0+c*(cell+gap), y=y0+r*(cell+gap);
+      g.appendChild(el('rect',{x,y,width:cell,height:cell,rx:6,fill:mix('#000000','#ffffff',v/255),stroke:'#00000018'}));
+      if((r===1&&c===1)||(r===3&&c===2)||(r===5&&c===3)){
+        const t=el('text',{x:x+cell/2,y:y+cell/2+7,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'17','font-weight':'700','fill': v<128? '#FFC145':'#221F26'});
+        t.textContent=v;
+        g.appendChild(t);
+      }
+    });
+  });
+  svg.appendChild(g);
+  const scan = el('rect',{x:x0,y:y0,width:cell,height:gridH,rx:8,fill:'none',stroke:CORAL,'stroke-width':4,opacity:'0.85'});
+  scan.appendChild(el('animate',{attributeName:'x',values:Array.from({length:cols},(_,c)=>x0+c*(cell+gap)).join(';')+';'+x0,dur:'7s',repeatCount:'indefinite'}));
+  svg.appendChild(scan);
+  mount(id,svg);
+}
+
+/* ---------- RGB stacked channels ---------- */
+function renderRGB(id){
+  const W=760,H=440; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const size=230;
+  const channels=[{c:'#E4574A',label:'R',dx:-90,dy:40,cls:'rgb-r'},{c:'#3FA66B',label:'G',dx:0,dy:-20,cls:'rgb-g'},{c:'#3E8FD6',label:'B',dx:90,dy:40,cls:'rgb-b'}];
+  channels.forEach((ch)=>{
+    const g=el('g',{opacity:'0.94',class:ch.cls});
+    const x=(W-size)/2+ch.dx, y=(H-size)/2+ch.dy;
+    g.appendChild(el('rect',{x,y,width:size,height:size,rx:16,fill:ch.c,opacity:'0.22',stroke:ch.c,'stroke-width':3}));
+    for(let r=0;r<5;r++) for(let c=0;c<5;c++){
+      g.appendChild(el('rect',{x:x+12+c*41,y:y+12+r*41,width:35,height:35,rx:5,fill:ch.c,opacity:(0.15+((r*5+c)%5)*0.14).toFixed(2)}));
+    }
+    const label=el('text',{x:x+size-26,y:y+32,'text-anchor':'middle','font-family':'Bricolage Grotesque, sans-serif','font-size':'24','font-weight':'800',fill:'#fff'});
+    label.textContent=ch.label;
+    g.appendChild(label);
+    svg.appendChild(g);
+  });
+  mount(id,svg);
+}
+
+/* ---------- Convolution sliding window ---------- */
+function renderConv(id){
+  const W=760,H=460; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const cols=7,rows=7,cell=40,gap=4;
+  const gridW=cols*(cell+gap), gridH=rows*(cell+gap);
+  const x0=(W-gridW)/2, y0=20;
+  const g=el('g',{});
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const v = 60+((r*7+c*13)%180);
+    g.appendChild(el('rect',{x:x0+c*(cell+gap),y:y0+r*(cell+gap),width:cell,height:cell,rx:5,fill:mix('#000000','#ffffff',v/255)}));
+  }
+  svg.appendChild(g);
+  const ww=3*(cell+gap)-gap+8;
+  const positions=[];
+  for(let r=0;r<=rows-3;r++){ for(let c=0;c<=cols-3;c+=2){ positions.push([c,r]); } }
+  const xsList = positions.map(p=>x0+p[0]*(cell+gap)-4).join(';');
+  const ysList = positions.map(p=>y0+p[1]*(cell+gap)-4).join(';');
+  const win = el('rect',{x:x0-4,y:y0-4,width:ww,height:ww,rx:9,fill:'none',stroke:CORAL,'stroke-width':5});
+  win.appendChild(el('animate',{attributeName:'x',values:xsList+';'+(x0-4),dur:'6s',repeatCount:'indefinite'}));
+  win.appendChild(el('animate',{attributeName:'y',values:ysList+';'+(y0-4),dur:'6s',repeatCount:'indefinite'}));
+  svg.appendChild(win);
+
+  const kx=x0+gridW+40, ky=y0+40;
+  const kernel=[[-1,0,1],[-2,0,2],[-1,0,1]];
+  svg.appendChild(el('rect',{x:kx,y:ky,width:150,height:150,rx:12,fill:'#221F26'}));
+  kernel.forEach((row,r)=>row.forEach((v,c)=>{
+    const t=el('text',{x:kx+27+c*49,y:ky+34+r*49,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'22','font-weight':'700',fill: v<0?'#FF8A68': v>0?'#7EC2F3':'#F3ECDD'});
+    t.textContent = (v>0? '+':'')+v;
+    svg.appendChild(t);
+  }));
+  const kl=el('text',{x:kx+75,y:ky+178,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'16','fill':'#4A453F'});
+  kl.textContent='the kernel (3×3)';
+  svg.appendChild(kl);
+  mount(id,svg);
+}
+
+/* ---------- Edges before/after ---------- */
+function renderEdges(id){
+  const W=760,H=460; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const bmp=DIGIT_BITMAPS[8];
+  const rows=bmp.length, cols=bmp[0].length;
+  const cell=30, gap=3;
+  const gridW=cols*(cell+gap);
+  function drawGrid(x0,y0,edgeMode){
+    const g=el('g',{});
+    bmp.forEach((row,r)=>{
+      [...row].forEach((ch,c)=>{
+        let fill, flick=false;
+        if(!edgeMode){
+          fill = mix('#000000','#ffffff', ch==='1'? 0.15:0.92);
+        } else {
+          const left = c>0? row[c-1]:'0';
+          const right = c<cols-1? row[c+1]:'0';
+          const isEdge = ch !== left || ch !== right;
+          fill = (ch==='1' && isEdge) ? CORAL : mix('#000000','#ffffff',0.95);
+          flick = ch==='1' && isEdge;
+        }
+        const r_ = el('rect',{x:x0+c*(cell+gap),y:y0+r*(cell+gap),width:cell,height:cell,rx:4,fill});
+        if(flick) r_.setAttribute('class','edge-flicker');
+        g.appendChild(r_);
+      });
+    });
+    return g;
+  }
+  const gridH = rows*(cell+gap);
+  const midY = H/2;
+  const y0 = midY - gridH - 30;
+  svg.appendChild(drawGrid((W-gridW)/2, y0, false));
+  const capA=el('text',{x:W/2,y:y0+gridH+20,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'16','fill':'#4A453F'});
+  capA.textContent='before: raw grayscale';
+  svg.appendChild(capA);
+
+  svg.appendChild(arrow(W/2-30, midY, W/2+30, midY, 'pulse-arrow'));
+
+  const y1=midY+30;
+  svg.appendChild(drawGrid((W-gridW)/2, y1, true));
+  const capB=el('text',{x:W/2,y:y1+gridH+22,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'16','fill':CORAL,'font-weight':'700'});
+  capB.textContent='after: edges highlighted';
+  svg.appendChild(capB);
+  mount(id,svg);
+}
+
+/* ---------- Neuron diagram ---------- */
+function renderNeuron(id){
+  const W=760,H=460; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const inputs=[{y:90,v:'x₁'},{y:190,v:'x₂'},{y:290,v:'x₃'},{y:390,v:'x₄'}];
+  const sumX=330, sumY=240, actX=530;
+  const actR2=36;
+  inputs.forEach((inp,i)=>{
+    svg.appendChild(el('circle',{cx:90,cy:inp.y,r:27,fill:PAPER,stroke:INK,'stroke-width':3}));
+    const t=el('text',{x:90,y:inp.y+7,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'18','font-weight':'700',fill:INK});
+    t.textContent=inp.v;
+    svg.appendChild(t);
+    const line=el('line',{x1:117,y1:inp.y,x2:sumX-34,y2:sumY,stroke: i%2? TEAL:CORAL,'stroke-width':2.2,opacity:'0.7'});
+    svg.appendChild(line);
+    const wLabel=el('text',{x:205,y:(inp.y+sumY)/2-6,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'14',fill:'#4A453F'});
+    wLabel.textContent='w'+(i+1);
+    svg.appendChild(wLabel);
+    const dot=pulseDot(6, i%2? TEAL:CORAL);
+    dot.appendChild(animateMotion(`M${90},${inp.y} L${sumX},${sumY}`,'2.4s', (i*0.5)+'s'));
+    svg.appendChild(dot);
+  });
+  svg.appendChild(el('circle',{cx:sumX,cy:sumY,r:40,fill:INK}));
+  const sigma=el('text',{x:sumX,y:sumY+12,'text-anchor':'middle','font-family':'Bricolage Grotesque, sans-serif','font-size':'32','font-weight':'700',fill:YELLOW});
+  sigma.textContent='Σ';
+  svg.appendChild(sigma);
+  svg.appendChild(arrow(sumX+40,sumY,actX-actR2-8,sumY));
+  svg.appendChild(el('circle',{cx:actX,cy:sumY,r:actR2,fill:'none',stroke:TEAL,'stroke-width':4}));
+  const act=el('text',{x:actX,y:sumY+7,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'15','font-weight':'700',fill:TEAL});
+  act.textContent='ReLU';
+  svg.appendChild(act);
+  svg.appendChild(arrow(actX+actR2,sumY,actX+actR2+48,sumY));
+  const outLabel=el('text',{x:actX+actR2+60,y:sumY+7,'font-family':'Space Grotesk, sans-serif','font-size':'18',fill:'#4A453F'});
+  outLabel.textContent='output';
+  svg.appendChild(outLabel);
+  const dot2=pulseDot(6,CORAL);
+  dot2.appendChild(animateMotion(`M${sumX},${sumY} L${actX+actR2+50},${sumY}`,'2.4s','2.2s'));
+  svg.appendChild(dot2);
+  mount(id,svg);
+}
+
+/* ---------- Layers / network ---------- */
+function renderLayers(id){
+  const W=760,H=460; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const tileX=60, tileY=160, tileSize=100;
+  const bmp = DIGIT_BITMAPS[8];
+  const cell=tileSize/7;
+  bmp.forEach((row,r)=>[...row].forEach((ch,c)=>{
+    svg.appendChild(el('rect',{x:tileX+c*cell,y:tileY+r*cell,width:cell-1,height:cell-1, fill: ch==='1'? INK:'#00000012'}));
+  }));
+  const inLabel=el('text',{x:tileX+tileSize/2,y:tileY+tileSize+26,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'15',fill:'#4A453F'});
+  inLabel.textContent='784 pixels';
+  svg.appendChild(inLabel);
+
+  const hiddenX=390, hiddenYs=[]; const hCount=8;
+  for(let i=0;i<hCount;i++) hiddenYs.push(60 + i*(320/(hCount-1)));
+  hiddenYs.forEach(hy=>{
+    svg.appendChild(el('line',{x1:tileX+tileSize+8,y1:tileY+tileSize/2,x2:hiddenX-24,y2:hy,stroke:TEAL,'stroke-width':1,opacity:'0.28'}));
+  });
+  hiddenYs.forEach(hy=>{
+    svg.appendChild(el('circle',{cx:hiddenX,cy:hy,r:15,fill:PAPER,stroke:TEAL,'stroke-width':2.5}));
+  });
+  const hLabel=el('text',{x:hiddenX,y:410,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'15',fill:'#4A453F'});
+  hLabel.textContent='128 neurons';
+  svg.appendChild(hLabel);
+
+  const outX=670;
+  for(let i=0;i<10;i++){
+    const oy = 40 + i*(360/9);
+    hiddenYs.forEach(hy=>{
+      svg.appendChild(el('line',{x1:hiddenX+15,y1:hy,x2:outX-16,y2:oy,stroke:CORAL,'stroke-width':0.5,opacity:'0.07'}));
+    });
+  }
+  for(let i=0;i<10;i++){
+    const oy = 40 + i*(360/9);
+    svg.appendChild(el('circle',{cx:outX,cy:oy,r:16,fill: i===7? YELLOW:PAPER, stroke:CORAL,'stroke-width':2.5}));
+    const t=el('text',{x:outX,y:oy+5,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'14','font-weight':'700',fill:INK});
+    t.textContent=i;
+    svg.appendChild(t);
+  }
+  const oLabel=el('text',{x:outX,y:428,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'15',fill:'#4A453F'});
+  oLabel.textContent='10 digits';
+  svg.appendChild(oLabel);
+
+  const sampleH=[hiddenYs[1],hiddenYs[4],hiddenYs[6]];
+  sampleH.forEach((hy,i)=>{
+    const d1=pulseDot(5,TEAL);
+    d1.appendChild(animateMotion(`M${tileX+tileSize},${tileY+tileSize/2} L${hiddenX},${hy}`,'2.2s',(i*0.6)+'s'));
+    svg.appendChild(d1);
+    const d2=pulseDot(5,CORAL);
+    d2.appendChild(animateMotion(`M${hiddenX},${hy} L${outX},${40+7*(360/9)}`,'2.2s',(i*0.6+1.1)+'s'));
+    svg.appendChild(d2);
+  });
+  mount(id,svg);
+}
+
+/* ---------- Activation graph ---------- */
+function renderActivation(id){
+  const W=760,H=460; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const ox=90, oy=380, ax=650, ay=70;
+  svg.appendChild(el('line',{x1:ox,y1:oy,x2:ax,y2:oy,stroke:INK,'stroke-width':3}));
+  svg.appendChild(el('line',{x1:ox,y1:oy,x2:ox,y2:ay,stroke:INK,'stroke-width':3}));
+  const xLabel=el('text',{x:ax+10,y:oy+7,'font-family':'JetBrains Mono, monospace','font-size':'18',fill:'#4A453F'}); xLabel.textContent='x'; svg.appendChild(xLabel);
+  const yLabel=el('text',{x:ox-12,y:ay-12,'font-family':'JetBrains Mono, monospace','font-size':'18',fill:'#4A453F','text-anchor':'end'}); yLabel.textContent='relu(x)'; svg.appendChild(yLabel);
+  svg.appendChild(el('line',{x1:ox,y1:oy-14,x2:ax-30,y2:ay+14,stroke:'#a8a196','stroke-width':2.2,'stroke-dasharray':'6 8'}));
+  const refLabel=el('text',{x:ax-60,y:ay+6,'font-family':'Space Grotesk, sans-serif','font-size':'15',fill:'#a8a196'}); refLabel.textContent='without activation'; svg.appendChild(refLabel);
+  const midX=(ox+ax)/2;
+  const path=el('path',{d:`M${ox},${oy} L${midX},${oy} L${ax-30},${ay+30}`,fill:'none',stroke:TEAL,'stroke-width':6,'stroke-linecap':'round',class:'relu-draw'});
+  svg.appendChild(path);
+  const reluLabel=el('text',{x:midX+30,y:oy-40,'font-family':'Space Grotesk, sans-serif','font-size':'18','font-weight':'700',fill:TEAL}); reluLabel.textContent='ReLU'; svg.appendChild(reluLabel);
+  mount(id,svg);
+}
+
+/* ---------- Softmax bar chart ---------- */
+function renderBars(id, values, highlightIndex, labels){
+  const W=760,H=460; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const n=values.length;
+  const chartW=640, chartH=320, x0=(W-chartW)/2, y0=380;
+  const barW=chartW/n*0.62, gap=chartW/n;
+  svg.appendChild(el('line',{x1:x0-10,y1:y0,x2:x0+chartW+10,y2:y0,stroke:INK,'stroke-width':3}));
+  values.forEach((v,i)=>{
+    const h = v*chartH;
+    const x = x0 + i*gap + (gap-barW)/2;
+    const y = y0-h;
+    const bar=el('rect',{x,y,width:barW,height:h,rx:7,fill: i===highlightIndex? YELLOW: mix(TEAL,PAPER,0.35), stroke: i===highlightIndex? INK:'none', 'stroke-width':2.2, class:'grow-bar gb'+((i%10)+1)});
+    svg.appendChild(bar);
+    if(i===highlightIndex){
+      const pct=el('text',{x:x+barW/2,y:y-14,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'19','font-weight':'700',fill:INK});
+      pct.textContent=Math.round(v*100)+'%';
+      svg.appendChild(pct);
+    }
+    const lab=el('text',{x:x+barW/2,y:y0+26,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'16','font-weight': i===highlightIndex?'700':'400', fill: i===highlightIndex? INK:'#4A453F'});
+    lab.textContent = labels ? labels[i] : i;
+    svg.appendChild(lab);
+  });
+  mount(id,svg);
+}
+
+/* ---------- Loss comparison ---------- */
+function renderLoss(id){
+  const W=760,H=460; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const trueVals=[0,0,0,0,0,0,0,1,0,0];
+  const predVals=[0.02,0.01,0.03,0.02,0.05,0.02,0.02,0.71,0.07,0.05];
+  const n=10, chartW=640, chartH=90, x0=(W-chartW)/2;
+  const barW=chartW/n*0.6, gap=chartW/n;
+  const y0=140;
+  const trueLabel=el('text',{x:x0-10,y:y0-chartH-16,'font-family':'Space Grotesk, sans-serif','font-size':'17','font-weight':'700',fill:'#4A453F'}); trueLabel.textContent='true answer: 7'; svg.appendChild(trueLabel);
+  trueVals.forEach((v,i)=>{
+    const h=v*chartH; const x=x0+i*gap+(gap-barW)/2; const y=y0-h;
+    svg.appendChild(el('rect',{x,y,width:barW,height:Math.max(h,4),rx:5,fill: v>0? TEAL:'#00000012',class:'grow-bar gb'+((i%10)+1)}));
+  });
+  const y1=380;
+  const predLabel=el('text',{x:x0-10,y:y1-chartH-16,'font-family':'Space Grotesk, sans-serif','font-size':'17','font-weight':'700',fill:'#4A453F'}); predLabel.textContent='network guessed'; svg.appendChild(predLabel);
+  predVals.forEach((v,i)=>{
+    const h=v*chartH; const x=x0+i*gap+(gap-barW)/2; const y=y1-h;
+    svg.appendChild(el('rect',{x,y,width:barW,height:Math.max(h,4),rx:5,fill: i===7? CORAL: mix(CORAL,PAPER,0.6),class:'grow-bar gb'+((i%10)+1)}));
+    const lab=el('text',{x:x+barW/2,y:y1+22,'text-anchor':'middle','font-family':'JetBrains Mono, monospace','font-size':'14',fill:'#4A453F'});
+    lab.textContent=i; svg.appendChild(lab);
+  });
+  const gx = x0+7*gap+gap/2;
+  svg.appendChild(el('line',{x1:gx,y1:y0+8,x2:gx,y2:y1-chartH-8,stroke:INK,'stroke-width':2,'stroke-dasharray':'4 6',class:'gap-blink'}));
+  const gapLabel=el('text',{x:gx+16,y:(y0+y1)/2,'font-family':'Space Grotesk, sans-serif','font-size':'16','font-weight':'700',fill:INK}); gapLabel.textContent='the gap = the loss'; svg.appendChild(gapLabel);
+  mount(id,svg);
+}
+
+/* ---------- Gradient descent bowl ---------- */
+function renderDescent(id){
+  const W=760,H=460; const svg=svgRoot(`0 0 ${W} ${H}`);
+  const x0=80, x1=680, topY=90, botY=340;
+  const bowl = `M${x0},${topY+40} Q${(x0+x1)/2},${botY+90} ${x1},${topY+40}`;
+  svg.appendChild(el('path',{d:bowl,fill:'none',stroke:INK,'stroke-width':4}));
+  function pointAt(t){
+    const x = x0 + t*(x1-x0);
+    const norm = (t-0.5)*2;
+    const y = botY+40 - (1-norm*norm) * (botY-topY-20);
+    return [x,y];
+  }
+  let prev = pointAt(0.06);
+  svg.appendChild(el('circle',{cx:prev[0],cy:prev[1],r:11,fill:CORAL,stroke:INK,'stroke-width':2.6}));
+  [0.2,0.34,0.46,0.5].forEach((t,i)=>{
+    const pt=pointAt(t);
+    svg.appendChild(el('line',{x1:prev[0],y1:prev[1],x2:pt[0],y2:pt[1],stroke:YELLOW,'stroke-width':2.6,'stroke-dasharray':'5 7'}));
+    svg.appendChild(el('circle',{cx:pt[0],cy:pt[1],r: i===3?13:8,fill: i===3? TEAL:CORAL, stroke:INK,'stroke-width':2.6}));
+    prev=pt;
+  });
+  const label1=el('text',{x:x0,y:topY+16,'font-family':'Space Grotesk, sans-serif','font-size':'16','fill':'#4A453F'}); label1.textContent='high loss'; svg.appendChild(label1);
+  const label2=el('text',{x:x1-110,y:topY+16,'text-anchor':'start','font-family':'Space Grotesk, sans-serif','font-size':'16','fill':'#4A453F'}); label2.textContent='high loss'; svg.appendChild(label2);
+  const label3=el('text',{x:(x0+x1)/2,y:botY+70,'text-anchor':'middle','font-family':'Space Grotesk, sans-serif','font-size':'18','font-weight':'700','fill':TEAL}); label3.textContent='low loss - best weights'; svg.appendChild(label3);
+
+  const rollPath = `M${x0+10},${topY+45} Q${(x0+x1)/2},${botY+90} ${x1-10},${topY+45}`;
+  const ball = el('circle',{r:12, fill:CORAL, stroke:INK,'stroke-width':2.6, class:'pulse-dot'});
+  ball.appendChild(el('animateMotion',{dur:'5s', repeatCount:'indefinite', path:rollPath, keyPoints:'0;1;0', keyTimes:'0;0.5;1', calcMode:'linear'}));
+  svg.appendChild(ball);
+  mount(id,svg);
+}
+
+/* ===========================================
+   SYNTAX HIGHLIGHTER
+   =========================================== */
+function highlightPython(code){
+  const escaped = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const pattern = /(#[^\n]*)|('[^']*'|"[^"]*")|\b(def|class|for|in|return|import|if|else|elif|while|self|range)\b|\b(\d+\.?\d*)\b/g;
+  return escaped.replace(pattern, (match, comment, str, kw, num) => {
+    if(comment) return '<span class="tok-c">'+comment+'</span>';
+    if(str) return '<span class="tok-s">'+str+'</span>';
+    if(kw) return '<span class="tok-k">'+kw+'</span>';
+    if(num) return '<span class="tok-n">'+num+'</span>';
+    return match;
+  });
+}
+document.querySelectorAll('.code-card code').forEach(node=>{
+  node.innerHTML = highlightPython(node.textContent);
+});
+
+/* ===========================================
+   RENDER ALL DIAGRAMS
+   =========================================== */
+renderRoadmap('dg-roadmap');
+renderRoadmap('dg-roadmap2');
+renderCVIntro('dg-cvintro');
+renderGrayscale('dg-grayscale');
+renderRGB('dg-rgb');
+renderConv('dg-conv');
+renderEdges('dg-edges');
+renderNeuron('dg-neuron');
+renderLayers('dg-layers');
+renderActivation('dg-activation');
+renderBars('dg-softmax', [0.02,0.01,0.03,0.02,0.05,0.02,0.02,0.71,0.07,0.05], 7);
+renderLoss('dg-loss');
+renderDescent('dg-descent');
+
+/* ===========================================
+   NAVIGATION CONTROLLER
+   =========================================== */
+class GuideNav{
+  constructor(){
+    this.sections = Array.from(document.querySelectorAll('.concept'));
+    this.tocItems = Array.from(document.querySelectorAll('.toc-item'));
+    this.main = document.getElementById('guideMain');
+    this.order = this.sections.map(s=>s.id);
+    this.tocItems.forEach(btn=>{
+      btn.addEventListener('click', ()=>this.go(btn.dataset.target));
+    });
+    document.querySelectorAll('[data-jump]').forEach(a=>{
+      a.addEventListener('click', (e)=>{ e.preventDefault(); this.go(a.dataset.jump); });
+    });
+    document.addEventListener('keydown',(e)=>{
+      if(e.key==='ArrowRight' || e.key==='PageDown'){ this.step(1); }
+      else if(e.key==='ArrowLeft' || e.key==='PageUp'){ this.step(-1); }
+    });
+    const initial = (location.hash||'').replace('#','') || this.order[0];
+    this.go(this.order.includes(initial)? initial : this.order[0], true);
+  }
+  step(dir){
+    const idx = this.order.indexOf(this.current);
+    const next = this.order[Math.max(0, Math.min(this.order.length-1, idx+dir))];
+    this.go(next);
+  }
+  go(id, skipScroll){
+    if(!this.order.includes(id)) return;
+    this.current = id;
+    this.sections.forEach(s=>s.classList.toggle('active', s.id===id));
+    this.tocItems.forEach(btn=>{
+      const isActive = btn.dataset.target===id;
+      btn.classList.toggle('active', isActive);
+      if(isActive) btn.classList.add('visited');
+    });
+    history.replaceState(null,'','#'+id);
+    if(!skipScroll) this.main.scrollTop = 0;
+    const activeToc = this.tocItems.find(b=>b.dataset.target===id);
+    if(activeToc) activeToc.scrollIntoView({block:'nearest'});
+  }
+}
+new GuideNav();
+</script>
+</body>
+</html>
